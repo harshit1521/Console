@@ -26,7 +26,7 @@ app.post("/submission", async (req, res) => {
         }
     })
 
-    await redis.lPush("task", JSON.stringify({ submissionId: response.id, code, language }));
+    await redis.lPush("task", JSON.stringify({ submissionId: response.id }));
 
     res.json({
         submissionId: response.id, 
