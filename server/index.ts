@@ -3,11 +3,12 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "./db";
 import { createClient } from "redis";
+import { stat } from "node:fs";
 
 const redis = createClient({
     url: process.env.REDIS_URL!,
 });
-await client.connect();
+await redis.connect();
 
 const app = express();
 
@@ -26,7 +27,13 @@ app.post("/submission", async (req, res) => {
     })
 
     await redis.lPush("task", JSON.stringify({ submissionId: response.id, code, language }));
-    
 
+    res.json({
+        submissionId: response.id, 
+        status: response.status
+    })
+})
 
+app.listen("3000" , () => {
+    console.log(`server is listening at port: 3000`)
 })
