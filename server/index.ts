@@ -29,11 +29,19 @@ app.post("/submission", async (req, res) => {
     await redis.lPush("task", JSON.stringify({ submissionId: response.id }));
 
     res.json({
-        submissionId: response.id, 
+        submissionId: response.id,
         status: response.status
     })
 })
 
-app.listen("3000" , () => {
+app.get("/submission/:subId/stream", async (req, res) => {
+    
+    const subId = req.params?.subId; 
+
+    
+})
+
+
+app.listen("3000", () => {
     console.log(`server is listening at port: 3000`)
 })

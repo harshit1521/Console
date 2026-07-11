@@ -5,16 +5,15 @@ import fs from "fs";
 import path from "path";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
-import { settings } from "cluster";
 import { exitCode, stdout } from "process";
-import { text } from "stream/consumers";
 
 const redis = createClient({
     url: process.env.REDIS_URL!,
 });
 await redis.connect()
     .then(async () => {
-
+        console.log(`worker started !!`);
+        
         while (1) {
             // fetch task from queue 
             const response = await redis.brPop("task", 0);
@@ -31,6 +30,8 @@ await redis.connect()
 
             if (language === "JAVASCRIPT") {
 
+                console.log(`started code execution ...`);
+                
                 const __filename = fileURLToPath(import.meta.url);
                 const __dirname = path.dirname(__filename);
 
@@ -69,6 +70,8 @@ await redis.connect()
                             data: { status, output: Output }
                         })
 
+                        console.log(`execution completed ...`);
+                        
                         await redis.publish(channel, JSON.stringify({ type: "done", data: exitCode }));
                         fs.unlinkSync(filePath);
 
