@@ -1,0 +1,259 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, Play, Trash2, Terminal, Code2 } from 'lucide-react';
+import Editor, { useMonaco } from "@monaco-editor/react";
+
+const LANGUAGES = [
+    { id: 'javascript', name: 'JavaScript', label: 'JAVASCRIPT', extension: 'js' },
+    { id: 'typescript', name: 'TypeScript', label: 'TYPESCRIPT', extension: 'ts' },
+    { id: 'python', name: 'Python', label: 'PYTHON', extension: 'py' },
+    { id: 'java', name: 'Java', label: 'JAVA', extension: 'java' },
+    { id: 'cpp', name: 'C++', label: 'C++', extension: 'cpp' },
+    { id: 'rust', name: 'Rust', label: 'RUST', extension: 'rs' },
+    { id: 'go', name: 'Go', label: 'GO', extension: 'go' },
+];
+
+export default function ConsoleIDE() {
+    const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [code, setCode] = useState('');
+    const [output, setOutput] = useState('');
+    const [isRunning, setIsRunning] = useState(false);
+    const dropdownRef = useRef(null);
+    const monaco = useMonaco();
+
+    // Define custom theme
+    useEffect(() => {
+        if (monaco) {
+            monaco.editor.defineTheme('console-dark', {
+                base: 'vs-dark',
+                inherit: false,
+                rules: [
+                    { token: 'comment', foreground: '5A6370', fontStyle: 'italic' },
+                    { token: 'string', foreground: '7EC699' },
+                    { token: 'number', foreground: 'B8A9FF' },
+                    { token: 'keyword', foreground: 'FF9D76' },
+                    { token: 'variable', foreground: 'F5F7FA' },
+                    { token: 'function', foreground: '56B6F2' },
+                    { token: 'delimiter', foreground: 'D1D5DB' },
+                    { token: '', foreground: 'F5F7FA' },
+                ],
+                colors: {
+                    'editor.background': '#11151B',
+                    'editor.foreground': '#F5F7FA',
+                    'editor.lineNumbersBackground': '#11151B',
+                    'editor.lineNumbersForeground': '#5A6370',
+                    'editor.lineHighlightBackground': '#151A2155',
+                    'editor.selectionBackground': '#2A313C80',
+                    'editor.selectionForeground': '#F5F7FA',
+                    'editor.inactiveSelectionBackground': '#2A313C40',
+                    'editor.cursorForeground': '#F5F7FA',
+                    'editor.cursorLineBackground': '#151A2155',
+                    'editorBracketMatch.background': '#2A313C',
+                    'editorBracketMatch.border': '#9BA3AF',
+                    'editorWhitespace.foreground': '#2A313C',
+                    'editorIndentGuide.background': '#2A313C',
+                    'editorIndentGuide.activeBackground': '#5A6370',
+                    'editorError.foreground': '#FF6B6B',
+                    'editorWarning.foreground': '#FFD93D',
+                }
+            });
+            monaco.editor.setTheme('console-dark');
+        }
+    }, [monaco]);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleRun = () => {
+        setIsRunning(true);
+        setOutput('Compiling and executing...');
+
+        // Simulated compilation delay
+        setTimeout(() => {
+            if (!code.trim()) {
+                setOutput('// Output ... { placeholder }\n\n[System]: No code provided to execute.');
+            } else {
+                setOutput(`[Process finished with exit code 0]\n\nOutput:\n> Executed ${selectedLang.name} script successfully.\n> Ready for input.`);
+            }
+            setIsRunning(false);
+        }, 600);
+    };
+
+    const handleClear = () => {
+        setCode('');
+        setOutput('');
+    };
+
+    // Calculate line numbers
+    const lineCount = Math.max(1, code.split('\n').length);
+    // const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
+
+    return (
+        // <div className="min-h-screen bg-[#0B0E12] text-[#F5F7FA] font-sans antialiased flex flex-col items-center justify-center p-4 sm:p-6 md:p-10 selection:bg-[#2A313C] selection:text-[#F5F7FA]">
+
+        //   {/* Outer Bordered Container */}
+
+        // </div>
+        <div className="w-full min-h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
+
+            {/* HEADER */}
+            <header className="px-6 py-5 border-b border-[#2A313C] bg-[#11151B] flex flex-col justify-center">
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#F5F7FA] leading-none" style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.02em' }}>
+                    Console
+                </h1>
+                <p className="text-xs sm:text-sm text-[#9BA3AF] mt-1.5 font-normal tracking-wide">
+                    online multilingual compiler
+                </p>
+            </header>
+
+            {/* TOOLBAR */}
+            <div className="px-6 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between gap-4">
+
+                {/* Left Side: Language Dropdown */}
+                <div className="relative flex-shrink-0" ref={dropdownRef}>
+                    <button
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="flex items-center justify-between min-w-[140px] px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#F5F7FA] bg-[#11151B] border border-[#2A313C] rounded-[6px] hover:border-[#9BA3AF] focus:outline-none focus:border-[#F5F7FA] transition-all duration-150 group"
+                        aria-expanded={isDropdownOpen}
+                    >
+                        <span>{selectedLang.name}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 ml-2 text-[#9BA3AF] group-hover:text-[#F5F7FA] transition-transform duration-150 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Custom Dropdown Menu */}
+                    {isDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-[#151A21] border border-[#2A313C] rounded-[6px] shadow-xl py-1 z-50 text-xs">
+                            {LANGUAGES.map((lang) => (
+                                <button
+                                    key={lang.id}
+                                    onClick={() => {
+                                        setSelectedLang(lang);
+                                        setIsDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 transition-colors duration-150 flex items-center justify-between ${selectedLang.id === lang.id
+                                        ? 'bg-[#2A313C] text-[#F5F7FA] font-medium'
+                                        : 'text-[#9BA3AF] hover:bg-[#11151B] hover:text-[#F5F7FA]'
+                                        }`}
+                                >
+                                    <span>{lang.name}</span>
+                                    <span className="text-[10px] font-mono text-[#9BA3AF] uppercase">{lang.extension}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Center: Primary RUN Button */}
+                <div className="flex-1 flex justify-center">
+                    <button
+                        onClick={handleRun}
+                        disabled={isRunning}
+                        className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-[#F5F7FA] bg-transparent border border-[#2A313C] rounded-[6px] hover:border-[#F5F7FA] hover:bg-[#2A313C]/30 active:bg-[#2A313C]/60 focus:outline-none focus:ring-1 focus:ring-[#F5F7FA] transition-all duration-150 disabled:opacity-50"
+                    >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>{isRunning ? 'RUNNING...' : 'RUN'}</span>
+                    </button>
+                </div>
+
+                {/* Right Side: Secondary CLEAR Button */}
+                <div className="flex-shrink-0">
+                    <button
+                        onClick={handleClear}
+                        className="flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wider text-[#9BA3AF] bg-transparent border border-[#2A313C] rounded-[6px] hover:text-[#F5F7FA] hover:border-[#9BA3AF] hover:bg-[#2A313C]/20 active:bg-[#2A313C]/40 focus:outline-none transition-all duration-150"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                        <span>CLEAR</span>
+                    </button>
+                </div>
+
+            </div>
+
+            {/* MAIN WORKSPACE (Equal Split) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 flex-1 bg-[#0B0E12]">
+
+                {/* LEFT PANEL: CODE EDITOR */}
+                <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#2A313C] bg-[#11151B]">
+                    {/* Label */}
+                    <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
+                        <span className="uppercase pl-3">{selectedLang.label}</span>
+                        <Code2 className="w-3.5 h-3.5 text-[#9BA3AF]/60" />
+                    </div>
+
+                    {/* Editor Input Area */}
+                    <div className="relative flex-1 overflow-hidden">
+                        <Editor
+                            height="100%"
+                            language={selectedLang.id}
+                            value={code}
+                            onChange={(value) => setCode(value || '')}
+                            theme="console-dark"
+                            options={{
+                                minimap: { enabled: false },
+                                lineNumbers: 'on',
+                                scrollBeyondLastLine: false,
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: 13,
+                                lineHeight: 24,
+                                fontLigatures: true,
+                                tabSize: 2,
+                                insertSpaces: true,
+                                wordWrap: 'on',
+                                automaticLayout: true,
+                                cursorStyle: 'line',
+                                cursorBlinking: 'blink',
+                                smoothScrolling: true,
+                                padding: { top: 12, bottom: 12 },
+                                renderWhitespace: 'none',
+                                bracketPairColorization: { enabled: true },
+                                'bracketPairColorization.independentColorPoolPerBracketType': true,
+                            }}
+                            loading={<div className="w-full h-full bg-[#11151B] flex items-center justify-center text-[#9BA3AF]">Loading editor...</div>}
+                        />
+                    </div>
+                </div>
+
+                {/* RIGHT PANEL: OUTPUT TERMINAL */}
+                <div className="flex flex-col bg-[#0B0E12]">
+                    {/* Label */}
+                    <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
+                        <span>OUTPUT</span>
+                        <Terminal className="w-3.5 h-3.5 mr-3 text-[#9BA3AF]/60" />
+                    </div>
+
+                    {/* Terminal Screen */}
+                    <div className="flex-1 p-4 font-mono text-xs sm:text-sm leading-6 overflow-y-auto">
+                        {output ? (
+                            <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
+                        ) : (
+                            <div className="text-[#9BA3AF]/40 select-none">
+                                Console output stream...
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* FOOTER STATUS BAR */}
+            <footer className="px-4 py-1.5 border-t border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[10px] font-mono text-[#9BA3AF]">
+                <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/80 animate-pulse"></span>
+                    <span>READY</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span>UTF-8</span>
+                    <span>2 SPACES</span>
+                </div>
+            </footer>
+
+        </div>
+    );
+}
