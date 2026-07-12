@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Play, Trash2, Terminal, Code2 } from 'lucide-react';
 import Editor, { useMonaco } from "@monaco-editor/react";
 
@@ -8,8 +8,6 @@ const LANGUAGES = [
     { id: 'python', name: 'Python', label: 'PYTHON', extension: 'py' },
     { id: 'java', name: 'Java', label: 'JAVA', extension: 'java' },
     { id: 'cpp', name: 'C++', label: 'C++', extension: 'cpp' },
-    { id: 'rust', name: 'Rust', label: 'RUST', extension: 'rs' },
-    { id: 'go', name: 'Go', label: 'GO', extension: 'go' },
 ];
 
 export default function ConsoleIDE() {
@@ -18,7 +16,8 @@ export default function ConsoleIDE() {
     const [code, setCode] = useState('');
     const [output, setOutput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
-    const dropdownRef = useRef(null);
+    const [isOutputOpen, setIsOutputOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
     const monaco = useMonaco();
 
     // Define custom theme
@@ -63,8 +62,8 @@ export default function ConsoleIDE() {
 
     // Close dropdown on click outside
     useEffect(() => {
-        function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && event.target instanceof Node && !dropdownRef.current.contains(event.target)) {
                 setIsDropdownOpen(false);
             }
         }
@@ -74,6 +73,7 @@ export default function ConsoleIDE() {
 
     const handleRun = () => {
         setIsRunning(true);
+        setIsOutputOpen(true);
         setOutput('Compiling and executing...');
 
         // Simulated compilation delay
@@ -93,7 +93,7 @@ export default function ConsoleIDE() {
     };
 
     // Calculate line numbers
-    const lineCount = Math.max(1, code.split('\n').length);
+    // const lineCount = Math.max(1, code.split('\n').length);
     // const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
     return (
@@ -102,7 +102,7 @@ export default function ConsoleIDE() {
         //   {/* Outer Bordered Container */}
 
         // </div>
-        <div className="w-full min-h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
+        <div className="w-full h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
 
             {/* HEADER */}
             <header className="px-6 py-5 border-b border-[#2A313C] bg-[#11151B] flex flex-col justify-center">
@@ -177,10 +177,10 @@ export default function ConsoleIDE() {
             </div>
 
             {/* MAIN WORKSPACE (Equal Split) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 flex-1 bg-[#0B0E12]">
+            <div className="grid grid-cols-1 md:grid-cols-2 flex-1 bg-[#0B0E12] relative">
 
                 {/* LEFT PANEL: CODE EDITOR */}
-                <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#2A313C] bg-[#11151B]">
+                <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#2A313C] bg-[#11151B] md:flex">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
                         <span className="uppercase pl-3">{selectedLang.label}</span>
@@ -212,16 +212,18 @@ export default function ConsoleIDE() {
                                 smoothScrolling: true,
                                 padding: { top: 12, bottom: 12 },
                                 renderWhitespace: 'none',
-                                bracketPairColorization: { enabled: true },
-                                'bracketPairColorization.independentColorPoolPerBracketType': true,
+                                bracketPairColorization: {
+                                    enabled: true,
+                                    independentColorPoolPerBracketType: true,
+                                },
                             }}
                             loading={<div className="w-full h-full bg-[#11151B] flex items-center justify-center text-[#9BA3AF]">Loading editor...</div>}
                         />
                     </div>
                 </div>
 
-                {/* RIGHT PANEL: OUTPUT TERMINAL */}
-                <div className="flex flex-col bg-[#0B0E12]">
+                {/* RIGHT PANEL: OUTPUT TERMINAL - Hidden on mobile, shown on desktop */}
+                <div className="hidden md:flex flex-col bg-[#0B0E12]">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
                         <span>OUTPUT</span>
@@ -241,6 +243,41 @@ export default function ConsoleIDE() {
                 </div>
 
             </div>
+
+            {/* MOBILE OUTPUT MODAL - Only shown on mobile when RUN is clicked */}
+            {isOutputOpen && (
+                <div className="fixed inset-0 md:hidden bg-black/50 z-50 flex flex-col">
+                    <div className="flex-1 flex flex-col bg-[#0B0E12] m-4 rounded-lg border border-[#2A313C] overflow-hidden">
+                        {/* Modal Header with Close Button */}
+                        <div className="px-4 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
+                                <Terminal className="w-3.5 h-3.5 text-[#9BA3AF]/60" />
+                                <span>OUTPUT</span>
+                            </div>
+                            <button
+                                onClick={() => setIsOutputOpen(false)}
+                                className="p-1 hover:bg-[#2A313C] rounded transition-colors"
+                                aria-label="Close output"
+                            >
+                                <svg className="w-5 h-5 text-[#9BA3AF] hover:text-[#F5F7FA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Terminal Screen */}
+                        <div className="flex-1 p-4 font-mono text-xs leading-6 overflow-y-auto">
+                            {output ? (
+                                <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
+                            ) : (
+                                <div className="text-[#9BA3AF]/40 select-none">
+                                    Console output stream...
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* FOOTER STATUS BAR */}
             <footer className="px-4 py-1.5 border-t border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[10px] font-mono text-[#9BA3AF]">

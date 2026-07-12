@@ -3,7 +3,7 @@ import ConsoleIDE from "./ConsoleIDE.tsx"
 
 const App = () => {
   return (
-    <div>
+    <div className="min-h-screen">
       <ConsoleIDE/>
     </div>
   )
