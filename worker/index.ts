@@ -41,7 +41,7 @@ await redis.connect()
                 const channel = `submission:${submissionId}`;
                 const child = spawn("node", [filePath]); // start node process 
 
-                const timer = setTimeout(() => { child.kill("SIGKILL"); }, 10000); // kill process if blocks thread 
+                // const timer = setTimeout(() => { child.kill("SIGKILL"); }, 10000); // kill process if blocks thread 
 
                 child.stdout.on("data", async (chunk) => {
 
@@ -61,7 +61,7 @@ await redis.connect()
 
                     child.on("close", async (exitCode) => {
 
-                        clearTimeout(timer); // clears proccess timer killer 
+                        // clearTimeout(timer); // clears proccess timer killer 
                         const status = exitCode === 0 ? "SUCCESS" : "INTERNAL_ERROR";
 
                         // update database
@@ -72,7 +72,7 @@ await redis.connect()
 
                         console.log(`execution completed ...`);
                         
-                        await redis.publish(channel, JSON.stringify({ type: "done", data: exitCode }));
+                        await redis.publish(channel, JSON.stringify({ type: "done", data: `Execution completed` }));
                         fs.unlinkSync(filePath);
 
                         resolve();

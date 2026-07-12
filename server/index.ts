@@ -38,7 +38,14 @@ app.get("/submission/:subId/stream", async (req, res) => {
     
     const subId = req.params?.subId; 
 
-    
+    await redis.subscribe(`submission:${subId}`, (message) => {
+        try {
+            let data = JSON.parse(message);
+            console.log(data.data);
+        } catch (error) {
+            console.log(error)
+        }
+    })
 })
 
 
