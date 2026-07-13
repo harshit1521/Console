@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Play, Trash2, Terminal, Code2 } from 'lucide-react';
-import Editor, { useMonaco } from "@monaco-editor/react";
+import { ChevronDown, Play, Trash2, Terminal, Code2, AwardIcon } from 'lucide-react';
+import Editor, { useMonaco, type OnMount } from "@monaco-editor/react";
+import axios from 'axios';
 
 const LANGUAGES = [
     { id: 'javascript', name: 'JavaScript', label: 'JAVASCRIPT', extension: 'js' },
@@ -18,7 +19,12 @@ export default function ConsoleIDE() {
     const [isRunning, setIsRunning] = useState(false);
     const [isOutputOpen, setIsOutputOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
     const monaco = useMonaco();
+
+    const handleEditorMount: OnMount = (editor) => {
+        editorRef.current = editor;
+    };
 
     // Define custom theme
     useEffect(() => {
@@ -71,18 +77,32 @@ export default function ConsoleIDE() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleRun = () => {
+    const handleRun = async () => {
+        const code = editorRef.current?.getValue() ?? "";
         setIsRunning(true);
         setIsOutputOpen(true);
-        setOutput('Compiling and executing...');
+        setOutput(code);
 
+        try {
+            const res = await axios.post(
+                "http://localhost:3000/submission",
+                {
+                    code: code,
+                    language: selectedLang.label
+                });
+
+            console.log(res.data?.submissionId);
+
+        } catch (error) {
+            console.log(error)
+        }
         // Simulated compilation delay
         setTimeout(() => {
-            if (!code.trim()) {
-                setOutput('// Output ... { placeholder }\n\n[System]: No code provided to execute.');
-            } else {
-                setOutput(`[Process finished with exit code 0]\n\nOutput:\n> Executed ${selectedLang.name} script successfully.\n> Ready for input.`);
-            }
+            // if (!code.trim()) {
+            //     setOutput('[System]: No code provided to execute.');
+            // } else {
+            //     setOutput(`[Process finished with exit code 0]\n\nOutput:\n> Executed ${selectedLang.name} script successfully.\n> Ready for input.`);
+            // }
             setIsRunning(false);
         }, 600);
     };
@@ -92,16 +112,7 @@ export default function ConsoleIDE() {
         setOutput('');
     };
 
-    // Calculate line numbers
-    // const lineCount = Math.max(1, code.split('\n').length);
-    // const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
-
     return (
-        // <div className="min-h-screen bg-[#0B0E12] text-[#F5F7FA] font-sans antialiased flex flex-col items-center justify-center p-4 sm:p-6 md:p-10 selection:bg-[#2A313C] selection:text-[#F5F7FA]">
-
-        //   {/* Outer Bordered Container */}
-
-        // </div>
         <div className="w-full h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
 
             {/* HEADER */}
@@ -192,8 +203,9 @@ export default function ConsoleIDE() {
                         <Editor
                             height="100%"
                             language={selectedLang.id}
-                            value={code}
-                            onChange={(value) => setCode(value || '')}
+                            // value={code}
+                            onMount={handleEditorMount}
+                            // onChange={(value) => setCode(value || '')}
                             theme="console-dark"
                             options={{
                                 minimap: { enabled: false },
