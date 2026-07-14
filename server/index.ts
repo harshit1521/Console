@@ -2,11 +2,6 @@ import "dotenv/config";
 import { WebSocketServer } from "ws";
 import { createClient } from "redis";
 import { randomUUID } from "node:crypto";
-// import express from "express";
-// import cors from "cors";
-// import { prisma } from "./db";
-// import { stat } from "node:fs";
-// import { Socket } from "node:dgram";
 
 const redis = createClient({
     url: process.env.REDIS_URL!,
@@ -15,28 +10,6 @@ await redis.connect();
 
 const subClient = redis.duplicate();
 await subClient.connect();
-
-// const app = express();
-
-// app.use(express.json());
-// app.use(cors());
-
-// app.post("/submission", async (req, res) => {
-//     const { code, language } = req.body;
-
-//     const response = await prisma.submission.create({
-//         data: {
-//             code,
-//             language,
-//             status: "PROCESSING"
-//         }
-//     })
-
-//     res.json({
-//         submissionId: response.id,
-//         status: response.status
-//     })
-// })
 
 const wss = new WebSocketServer({ port: 8080 });
 
@@ -81,12 +54,3 @@ wss.on("connection", async (socket) => {
     })
 
 })
-
-
-
-
-
-
-// app.listen("3000", () => {
-//     console.log(`server is listening at port: 3000`)
-// })
