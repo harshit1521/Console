@@ -78,10 +78,11 @@ export default function ConsoleIDE() {
     }, []);
 
     const handleRun = async () => {
-        const code = editorRef.current?.getValue() ?? "";
+        setCode(editorRef.current?.getValue() ?? "")
         setIsRunning(true);
         setIsOutputOpen(true);
-        setOutput(code);
+        setOutput('');
+        // setOutput(code);
 
         try {
             const res = await axios.post(
@@ -89,26 +90,43 @@ export default function ConsoleIDE() {
                 {
                     code: code,
                     language: selectedLang.label
-                });
+                }
+            );
 
-            console.log(res.data?.submissionId);
+            const submissionId = res.data?.submissionId;
+            const ws = new WebSocket(`ws://localhost:8080`);
+
+            ws.onopen = () => {
+                ws.send(submissionId);
+            }
+
+            ws.onmessage = (event) => {
+                console.log(event.data);
+                
+                setOutput(prev => prev + event.data);
+            }
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                setOutput(prev => prev + `\n[ERROR]: WebSocket connection failed`);
+                setIsRunning(false);
+            }
+
+            ws.onclose = () => {
+                console.log('WebSocket connection closed');
+                setIsRunning(false);
+                ws.close();
+            }
 
         } catch (error) {
-            console.log(error)
-        }
-        // Simulated compilation delay
-        setTimeout(() => {
-            // if (!code.trim()) {
-            //     setOutput('[System]: No code provided to execute.');
-            // } else {
-            //     setOutput(`[Process finished with exit code 0]\n\nOutput:\n> Executed ${selectedLang.name} script successfully.\n> Ready for input.`);
-            // }
+            console.log(error);
+            setOutput(`[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}`);
             setIsRunning(false);
-        }, 600);
+        }
     };
 
     const handleClear = () => {
-        setCode('');
+        setCode("");
         setOutput('');
     };
 
