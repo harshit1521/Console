@@ -1,11 +1,12 @@
 import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import { prisma } from "./db";
-import { createClient } from "redis";
-import { stat } from "node:fs";
 import { WebSocketServer } from "ws";
-import { Socket } from "node:dgram";
+import { createClient } from "redis";
+import { randomUUID } from "node:crypto";
+// import express from "express";
+// import cors from "cors";
+// import { prisma } from "./db";
+// import { stat } from "node:fs";
+// import { Socket } from "node:dgram";
 
 const redis = createClient({
     url: process.env.REDIS_URL!,
@@ -15,42 +16,42 @@ await redis.connect();
 const subClient = redis.duplicate();
 await subClient.connect();
 
-const app = express();
+// const app = express();
 
-app.use(express.json());
-app.use(cors());
+// app.use(express.json());
+// app.use(cors());
 
-app.post("/submission", async (req, res) => {
-    const { code, language } = req.body;
+// app.post("/submission", async (req, res) => {
+//     const { code, language } = req.body;
 
-    const response = await prisma.submission.create({
-        data: {
-            code,
-            language,
-            status: "PROCESSING"
-        }
-    })
+//     const response = await prisma.submission.create({
+//         data: {
+//             code,
+//             language,
+//             status: "PROCESSING"
+//         }
+//     })
 
-    res.json({
-        submissionId: response.id,
-        status: response.status
-    })
-})
+//     res.json({
+//         submissionId: response.id,
+//         status: response.status
+//     })
+// })
 
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection", async (socket) => {
     console.log("new client connected");
+    const id = randomUUID();
 
-    let activeSubmissionId: string | null = null;
     socket.on("message", async (data) => {
-        const submissionId = data.toString().trim();
-        activeSubmissionId = submissionId;
-        console.log(submissionId);
 
+        const { code, language } = JSON.parse(data.toString());
+
+        console.log(code);
         try {
 
-            await redis.subscribe(`submission:${submissionId}`, (message) => {
+            await redis.subscribe(`output:${id}`, (message) => {
 
                 let response = JSON.parse(message);
                 socket.send(response.data);
@@ -63,19 +64,19 @@ wss.on("connection", async (socket) => {
 
             })
 
-            await redis.lPush("task", JSON.stringify({ submissionId }));
+            await redis.lPush("task", JSON.stringify({ code, language, id }));
         } catch (error) {
             console.log(error)
-        }
+        }   
     });
 
     socket.on("close", async () => {
         console.log("WebSocket connection closed, cleaning up Redis client");
         try {
 
-            subClient.unsubscribe(`submission:${activeSubmissionId}`);
+            subClient.unsubscribe(`submission:${id}`);
         } catch (error) {
-            console.error(`Failed to unsubscribe from channel submission:${activeSubmissionId}:`, error);
+            console.error(`Failed to unsubscribe from channel submission:${id}:`, error);
         }
     })
 
@@ -86,6 +87,6 @@ wss.on("connection", async (socket) => {
 
 
 
-app.listen("3000", () => {
-    console.log(`server is listening at port: 3000`)
-})
+// app.listen("3000", () => {
+//     console.log(`server is listening at port: 3000`)
+// })
