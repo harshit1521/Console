@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Play, Trash2, Terminal, Code2, AwardIcon } from 'lucide-react';
+import { ChevronDown, Play, Trash2, Terminal, Code2, } from 'lucide-react';
 import Editor, { useMonaco, type OnMount } from "@monaco-editor/react";
-import axios from 'axios';
+// import { randomUUID } from "node:crypto";
+// import axios from 'axios';
 
 const LANGUAGES = [
     { id: 'javascript', name: 'JavaScript', label: 'JAVASCRIPT', extension: 'js' },
@@ -14,12 +15,12 @@ const LANGUAGES = [
 export default function ConsoleIDE() {
     const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [code, setCode] = useState('');
     const [output, setOutput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
     const [isOutputOpen, setIsOutputOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
     const monaco = useMonaco();
 
     const handleEditorMount: OnMount = (editor) => {
@@ -77,32 +78,50 @@ export default function ConsoleIDE() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Close WebSocket on unmount
+    useEffect(() => {
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
+        };
+    }, []);
+
     const handleRun = async () => {
-        setCode(editorRef.current?.getValue() ?? "")
+        const currentCode = editorRef.current?.getValue() ?? "";
+        console.log(currentCode);
         setIsRunning(true);
         setIsOutputOpen(true);
         setOutput('');
-        // setOutput(code);
 
         try {
-            const res = await axios.post(
-                "http://localhost:3000/submission",
-                {
-                    code: code,
-                    language: selectedLang.label
-                }
-            );
+            // const res = await axios.post(
+            //     "http://localhost:3000/submission",
+            //     {
+            //         code: currentCode,
+            //         language: selectedLang.label
+            //     }
+            // );
 
-            const submissionId = res.data?.submissionId;
+            // const submissionId = res.data?.submissionId;
             const ws = new WebSocket(`ws://localhost:8080`);
+            wsRef.current = ws;
+            
 
             ws.onopen = () => {
-                ws.send(submissionId);
+                ws.send(
+                    JSON.stringify(
+                        {
+                    code: currentCode,
+                    language: selectedLang.label
+                }
+            )
+        );
             }
 
             ws.onmessage = (event) => {
                 console.log(event.data);
-                
+
                 setOutput(prev => prev + event.data);
             }
 
@@ -110,12 +129,13 @@ export default function ConsoleIDE() {
                 console.error('WebSocket error:', error);
                 setOutput(prev => prev + `\n[ERROR]: WebSocket connection failed`);
                 setIsRunning(false);
+                wsRef.current = null;
             }
 
             ws.onclose = () => {
                 console.log('WebSocket connection closed');
                 setIsRunning(false);
-                ws.close();
+                wsRef.current = null;
             }
 
         } catch (error) {
@@ -126,7 +146,11 @@ export default function ConsoleIDE() {
     };
 
     const handleClear = () => {
-        setCode("");
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+        editorRef.current?.setValue("");
         setOutput('');
     };
 
@@ -147,10 +171,10 @@ export default function ConsoleIDE() {
             <div className="px-6 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between gap-4">
 
                 {/* Left Side: Language Dropdown */}
-                <div className="relative flex-shrink-0" ref={dropdownRef}>
+                <div className="relative shrink-0" ref={dropdownRef}>
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="flex items-center justify-between min-w-[140px] px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#F5F7FA] bg-[#11151B] border border-[#2A313C] rounded-[6px] hover:border-[#9BA3AF] focus:outline-none focus:border-[#F5F7FA] transition-all duration-150 group"
+                        className="flex items-center justify-between min-w-35 px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#F5F7FA] bg-[#11151B] border border-[#2A313C] rounded-md hover:border-[#9BA3AF] focus:outline-none focus:border-[#F5F7FA] transition-all duration-150 group"
                         aria-expanded={isDropdownOpen}
                     >
                         <span>{selectedLang.name}</span>
@@ -159,7 +183,7 @@ export default function ConsoleIDE() {
 
                     {/* Custom Dropdown Menu */}
                     {isDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-48 bg-[#151A21] border border-[#2A313C] rounded-[6px] shadow-xl py-1 z-50 text-xs">
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-[#151A21] border border-[#2A313C] rounded-md shadow-xl py-1 z-50 text-xs">
                             {LANGUAGES.map((lang) => (
                                 <button
                                     key={lang.id}
@@ -185,7 +209,7 @@ export default function ConsoleIDE() {
                     <button
                         onClick={handleRun}
                         disabled={isRunning}
-                        className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-[#F5F7FA] bg-transparent border border-[#2A313C] rounded-[6px] hover:border-[#F5F7FA] hover:bg-[#2A313C]/30 active:bg-[#2A313C]/60 focus:outline-none focus:ring-1 focus:ring-[#F5F7FA] transition-all duration-150 disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-[#F5F7FA] bg-transparent border border-[#2A313C] rounded-md hover:border-[#F5F7FA] hover:bg-[#2A313C]/30 active:bg-[#2A313C]/60 focus:outline-none focus:ring-1 focus:ring-[#F5F7FA] transition-all duration-150 disabled:opacity-50"
                     >
                         <Play className="w-3 h-3 fill-current" />
                         <span>{isRunning ? 'RUNNING...' : 'RUN'}</span>
@@ -193,10 +217,10 @@ export default function ConsoleIDE() {
                 </div>
 
                 {/* Right Side: Secondary CLEAR Button */}
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <button
                         onClick={handleClear}
-                        className="flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wider text-[#9BA3AF] bg-transparent border border-[#2A313C] rounded-[6px] hover:text-[#F5F7FA] hover:border-[#9BA3AF] hover:bg-[#2A313C]/20 active:bg-[#2A313C]/40 focus:outline-none transition-all duration-150"
+                        className="flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wider text-[#9BA3AF] bg-transparent border border-[#2A313C] rounded-md hover:text-[#F5F7FA] hover:border-[#9BA3AF] hover:bg-[#2A313C]/20 active:bg-[#2A313C]/40 focus:outline-none transition-all duration-150"
                     >
                         <Trash2 className="w-3 h-3" />
                         <span>CLEAR</span>
