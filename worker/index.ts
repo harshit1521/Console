@@ -51,7 +51,7 @@ await redis.connect()
                     await redis.publish(channel, JSON.stringify({ type: "stdout", data: chunk.toString() })) // publish each chunk for read
                 })
 
-                child.stderr.on(channel, async (chunk) => {
+                child.stderr.on("data", async (chunk) => {
                     
                     console.log(chunk.toString());
                     await redis.publish(channel, JSON.stringify({ type: "stderr", data: chunk.toString() })) // publish err for read
