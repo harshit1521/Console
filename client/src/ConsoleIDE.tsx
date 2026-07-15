@@ -112,6 +112,7 @@ export default function ConsoleIDE() {
                 ws.send(
                     JSON.stringify(
                         {
+                    type: "start",
                     code: currentCode,
                     language: selectedLang.label
                 }
@@ -120,7 +121,7 @@ export default function ConsoleIDE() {
             }
 
             ws.onmessage = (event) => {
-                console.log(event.data);
+                console.log(event.type);
 
                 setOutput(prev => prev + event.data);
             }
@@ -146,6 +147,7 @@ export default function ConsoleIDE() {
     };
 
     const handleClear = () => {
+        wsRef.current?.send(JSON.stringify({ type : "kill"}))
         if (wsRef.current) {
             wsRef.current.close();
             wsRef.current = null;
