@@ -41,23 +41,21 @@ await subClient.connect()
                 const outputChannel = `output:${id}`;
                 const child = spawn("node", [filePath]); // start node process 
 
+                // subscribe to kill channel ONCE (not per-chunk)
+                try {
+                    await subClient.subscribe(inputChannel, (message) => {
+                        const response = JSON.parse(message.toString());
+                        if (response.type === "kill") {
+                            child.kill("SIGKILL");
+                        }
+                    })
+                } catch (error) {
+                    console.log(`input channel err: ${error}`);
+                }
+
                 child.stdout.on("data", async (chunk) => {
-
                     console.log(chunk.toString());
-                    try {
-
-                        await subClient.subscribe(inputChannel, (message) => {
-                            const response = JSON.parse(message.toString());
-                            if (response.type === "kill") {
-                                child.kill("SIGKILL");
-                            }
-                        })
-                    } catch (error) {
-
-                        console.log(`input channel err: ${error}`);
-                    }
-
-                    await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() })); // publish each chunk for read
+                    await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() })) // publish each chunk for read
                 })
 
                 child.stderr.on("data", async (chunk) => {
@@ -71,6 +69,13 @@ await subClient.connect()
                     child.on("close", async (exitCode) => {
 
                         console.log(`execution completed ...`);
+
+                        // cleanup: unsubscribe from kill channel
+                        try {
+                            await subClient.unsubscribe(inputChannel);
+                        } catch (error) {
+                            console.log(`unsubscribe err: ${error}`);
+                        }
 
                         await redis.publish(outputChannel, JSON.stringify({ type: "done", data: `Execution completed` }));
                         fs.unlinkSync(filePath);
