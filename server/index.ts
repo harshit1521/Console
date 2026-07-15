@@ -1,56 +1,70 @@
 import "dotenv/config";
-import { WebSocketServer } from "ws";
 import { createClient } from "redis";
+import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
 
+// primary redis client for regular operations like , publish , lpush , brpop etc ..
 const redis = createClient({
     url: process.env.REDIS_URL!,
 });
 await redis.connect();
 
+// secondary redis client for subscription only ( no other regular operations are allowed, if its in subscription mode ...)
 const subClient = redis.duplicate();
 await subClient.connect();
 
+// --------------------- create ws server instance ---------------------
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection", async (socket) => {
+
     console.log("new client connected");
-    const id = randomUUID();
+    const id = randomUUID(); // generates random uuid 
 
     socket.on("message", async (data) => {
 
-        const { code, language } = JSON.parse(data.toString());
+        const res = JSON.parse(data.toString());
 
-        console.log(code);
-        try {
+        // console.log(res.type);
 
-            await redis.subscribe(`output:${id}`, (message) => {
+        if (res.type === "kill") {
+            try {
+                await redis.publish(`input:${id}`, JSON.stringify({ type: "kill" }));
+            } catch (error) {
+                console.log(error);
+            }
+        } else {
+            const { code, language } = res;
+            try {
+                await subClient.subscribe(`output:${id}`, (message) => {
 
-                let response = JSON.parse(message);
-                socket.send(response.data);
-                console.log(response.data);
+                    const response = JSON.parse(message);
+                    console.log(response.data);
+                    socket.send(response.data);
 
+                    if (response.type === "done") {
+                        socket.close(); 
+                        console.log("execution done");
+                    }
+                });
 
-                if (response.type === "done") {
-                    socket.close();
-                }
+                await redis.lPush("task", JSON.stringify({ code, language, id }));
+            } catch (error) {
 
-            })
+                console.log(error);
+            }
+        }
 
-            await redis.lPush("task", JSON.stringify({ code, language, id }));
-        } catch (error) {
-            console.log(error)
-        }   
     });
+
 
     socket.on("close", async () => {
         console.log("WebSocket connection closed, cleaning up Redis client");
         try {
-
-            subClient.unsubscribe(`submission:${id}`);
+            await subClient.unsubscribe(`output:${id}`);
         } catch (error) {
-            console.error(`Failed to unsubscribe from channel submission:${id}:`, error);
+            console.error(`Failed to unsubscribe from channel output:${id}:`, error);
         }
-    })
+    });
 
 })
