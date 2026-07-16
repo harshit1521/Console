@@ -34,7 +34,7 @@ await subClient.connect()
                 const __filename = fileURLToPath(import.meta.url);
                 const __dirname = path.dirname(__filename);
 
-                const filePath = path.join(__dirname, "code", `${id}.js`); // create js file for each task
+                const filePath = path.join(__dirname, "code", `${id}.mjs`); // create js file for each task
                 fs.writeFileSync(filePath, code); // write code to file 
 
                 const inputChannel = `input:${id}`;
@@ -44,9 +44,15 @@ await subClient.connect()
                 // subscribe to kill channel ONCE (not per-chunk)
                 try {
                     await subClient.subscribe(inputChannel, (message) => {
+
                         const response = JSON.parse(message.toString());
+                        
                         if (response.type === "kill") {
+
                             child.kill("SIGKILL");
+                        }else if(response.type === "stdin") {
+
+                            child.stdin.write(`${response.data}\n`); // that \n is the imp part ...
                         }
                     })
                 } catch (error) {
