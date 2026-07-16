@@ -39,13 +39,15 @@ wss.on("connection", async (socket) => {
                 await subClient.subscribe(`output:${id}`, (message) => {
 
                     const response = JSON.parse(message);
-                    console.log(response.data);
-                    socket.send(response.data);
 
                     if (response.type === "done") {
-                        socket.close(); 
                         console.log("execution done");
+                        socket.close(); 
+                        return;
                     }
+
+                    console.log(response.data);
+                    socket.send(response.data);
                 });
 
                 await redis.lPush("task", JSON.stringify({ code, language, id }));
