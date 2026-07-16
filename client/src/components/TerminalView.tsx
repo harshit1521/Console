@@ -30,7 +30,7 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
 
             const term = new XTerm({
                 cursorBlink: true,
-                fontSize: 14,
+                fontSize: 16,
                 theme: {
                     background: "#151A21",
                     foreground: "#FAF9F6",
@@ -74,11 +74,15 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
             xtermRef.current = term;
             fitAddonRef.current = fitAddon;
 
+            const resizeObserver = new ResizeObserver(() => fitAddon.fit());
+            resizeObserver.observe(containerRef.current);
+
             // Resize handling
             const handleResize = () => fitAddon.fit();
             window.addEventListener("resize", handleResize);
 
             return () => {
+                resizeObserver.disconnect();
                 window.removeEventListener("resize", handleResize);
                 term.dispose();
             };
@@ -99,7 +103,7 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
         return (
             <div
                 ref={containerRef}
-                style={{ width: "100%", height: "100%", padding: "16px" }}
+                className="h-full w-full p-4 box-border"
             />
         );
     }
