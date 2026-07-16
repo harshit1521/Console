@@ -77,7 +77,7 @@ await subClient.connect()
                             console.log(`unsubscribe err: ${error}`);
                         }
 
-                        await redis.publish(outputChannel, JSON.stringify({ type: "done", data: `Execution completed` }));
+                        await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
                         fs.unlinkSync(filePath);
 
                         resolve();
