@@ -3,7 +3,7 @@ import ConsoleIDE from "./ConsoleIDE.tsx"
 
 const App = () => {
   return (
-    <div className="min-h-screen">
+    <div className="h-screen overflow-hidden">
       <ConsoleIDE/>
     </div>
   )
