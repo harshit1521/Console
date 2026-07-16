@@ -1,27 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Play, Trash2, Terminal, Code2, } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { useMonaco, type OnMount } from "@monaco-editor/react";
+import { ChevronDown, Play, Trash2, Terminal, Code2, } from 'lucide-react';
+import TerminalView, { type TerminalHandle } from './components/TerminalView';
 // import { randomUUID } from "node:crypto";
 // import axios from 'axios';
 
 const LANGUAGES = [
     { id: 'javascript', name: 'JavaScript', label: 'JAVASCRIPT', extension: 'js' },
-    { id: 'typescript', name: 'TypeScript', label: 'TYPESCRIPT', extension: 'ts' },
-    { id: 'python', name: 'Python', label: 'PYTHON', extension: 'py' },
-    { id: 'java', name: 'Java', label: 'JAVA', extension: 'java' },
     { id: 'cpp', name: 'C++', label: 'C++', extension: 'cpp' },
+    { id: 'java', name: 'Java', label: 'JAVA', extension: 'java' },
+    { id: 'python', name: 'Python', label: 'PYTHON', extension: 'py' },
+    { id: 'typescript', name: 'TypeScript', label: 'TYPESCRIPT', extension: 'ts' },
 ];
 
 export default function ConsoleIDE() {
-    const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [output, setOutput] = useState('');
-    const [isRunning, setIsRunning] = useState(false);
-    const [isOutputOpen, setIsOutputOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement | null>(null);
-    const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-    const wsRef = useRef<WebSocket | null>(null);
     const monaco = useMonaco();
+    // const writtenLengthRef = useRef(0);
+    const [output, setOutput] = useState('');
+    const wsRef = useRef<WebSocket | null>(null);
+    const terminalRef = useRef<TerminalHandle>(null);
+    const [isRunning, setIsRunning] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const [isOutputOpen, setIsOutputOpen] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+    const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
 
     const handleEditorMount: OnMount = (editor) => {
         editorRef.current = editor;
@@ -93,42 +96,37 @@ export default function ConsoleIDE() {
         setIsRunning(true);
         setIsOutputOpen(true);
         setOutput('');
+        terminalRef.current?.clear();
 
         try {
-            // const res = await axios.post(
-            //     "http://localhost:3000/submission",
-            //     {
-            //         code: currentCode,
-            //         language: selectedLang.label
-            //     }
-            // );
 
-            // const submissionId = res.data?.submissionId;
             const ws = new WebSocket(`ws://localhost:8080`);
             wsRef.current = ws;
-            
+
 
             ws.onopen = () => {
                 ws.send(
                     JSON.stringify(
                         {
-                    type: "start",
-                    code: currentCode,
-                    language: selectedLang.label
-                }
-            )
-        );
+                            type: "start",
+                            code: currentCode,
+                            language: selectedLang.label
+                        }
+                    )
+                );
             }
 
             ws.onmessage = (event) => {
-                console.log(event.type);
-
-                setOutput(prev => prev + event.data);
+                const chunk = event.data as string;
+                setOutput(prev => prev + chunk); // keep for mobile modal / logging
+                terminalRef.current?.write(chunk.replace(/\n/g, "\r\n"));
             }
 
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
+                const msg = `\n[ERROR]: WebSocket connection failed\r\n`;
                 setOutput(prev => prev + `\n[ERROR]: WebSocket connection failed`);
+                terminalRef.current?.write(msg);
                 setIsRunning(false);
                 wsRef.current = null;
             }
@@ -147,14 +145,21 @@ export default function ConsoleIDE() {
     };
 
     const handleClear = () => {
-        wsRef.current?.send(JSON.stringify({ type : "kill"}))
+        wsRef.current?.send(JSON.stringify({ type: "kill" }))
         if (wsRef.current) {
             wsRef.current.close();
             wsRef.current = null;
         }
         editorRef.current?.setValue("");
         setOutput('');
+        terminalRef.current?.clear();
     };
+
+    const handleTerminalInput = useCallback((line: string) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "stdin", data: line }));
+        }
+    }, []);
 
     return (
         <div className="w-full h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
@@ -279,7 +284,7 @@ export default function ConsoleIDE() {
                 </div>
 
                 {/* RIGHT PANEL: OUTPUT TERMINAL - Hidden on mobile, shown on desktop */}
-                <div className="hidden md:flex flex-col bg-[#0B0E12]">
+                <div className="hidden md:flex flex-col bg-[#151A21]">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
                         <span>OUTPUT</span>
@@ -287,15 +292,16 @@ export default function ConsoleIDE() {
                     </div>
 
                     {/* Terminal Screen */}
-                    <div className="flex-1 p-4 font-mono text-xs sm:text-sm leading-6 overflow-y-auto">
-                        {output ? (
+                    <TerminalView ref={terminalRef} onData={handleTerminalInput}>
+                        {/* {output ? (
                             <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
                         ) : (
                             <div className="text-[#9BA3AF]/40 select-none">
                                 Console output stream...
+                                className="flex-1 p-4 font-mono text-xs sm:text-sm leading-6 overflow-y-auto"
                             </div>
-                        )}
-                    </div>
+                        )} */}
+                    </TerminalView>
                 </div>
 
             </div>
