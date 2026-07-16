@@ -27,13 +27,8 @@ wss.on("connection", async (socket) => {
 
         // console.log(res.type);
 
-        if (res.type === "kill") {
-            try {
-                await redis.publish(`input:${id}`, JSON.stringify({ type: "kill" }));
-            } catch (error) {
-                console.log(error);
-            }
-        } else {
+        if (res.type === "start") {
+
             const { code, language } = res;
             try {
                 await subClient.subscribe(`output:${id}`, (message) => {
@@ -42,7 +37,7 @@ wss.on("connection", async (socket) => {
 
                     if (response.type === "done") {
                         console.log("execution done");
-                        socket.close(); 
+                        socket.close();
                         return;
                     }
 
@@ -53,6 +48,19 @@ wss.on("connection", async (socket) => {
                 await redis.lPush("task", JSON.stringify({ code, language, id }));
             } catch (error) {
 
+                console.log(error);
+            }
+        } else if (res.type === "kill") {
+            try {
+                await redis.publish(`input:${id}`, JSON.stringify({ type: "kill" }));
+            } catch (error) {
+                console.log(error);
+            }
+        }else if(res.type === "stdin") {
+            try {
+                console.log(res.data)
+                await subClient.publish(`input:${id}`, JSON.stringify({ type: "stdin" , data: res.data }));
+            } catch (error) {
                 console.log(error);
             }
         }
