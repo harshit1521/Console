@@ -16,9 +16,9 @@ const LANGUAGES = [
 export default function ConsoleIDE() {
     const monaco = useMonaco();
     // const writtenLengthRef = useRef(0);
-    const [output, setOutput] = useState('');
     const wsRef = useRef<WebSocket | null>(null);
     const terminalRef = useRef<TerminalHandle>(null);
+    const mobileTerminalRef = useRef<TerminalHandle>(null);
     const [isRunning, setIsRunning] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const [isOutputOpen, setIsOutputOpen] = useState(false);
@@ -95,8 +95,8 @@ export default function ConsoleIDE() {
         console.log(currentCode);
         setIsRunning(true);
         setIsOutputOpen(true);
-        setOutput('');
         terminalRef.current?.clear();
+        mobileTerminalRef.current?.clear();
 
         try {
 
@@ -118,15 +118,18 @@ export default function ConsoleIDE() {
 
             ws.onmessage = (event) => {
                 const chunk = event.data as string;
-                setOutput(prev => prev + chunk); // keep for mobile modal / logging
-                terminalRef.current?.write(chunk.replace(/\n/g, "\r\n"));
+                console.log(chunk);
+
+                const output = chunk.replace(/\n/g, "\r\n");
+                terminalRef.current?.write(output);
+                mobileTerminalRef.current?.write(output);
             }
 
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
                 const msg = `\n[ERROR]: WebSocket connection failed\r\n`;
-                setOutput(prev => prev + `\n[ERROR]: WebSocket connection failed`);
                 terminalRef.current?.write(msg);
+                mobileTerminalRef.current?.write(msg);
                 setIsRunning(false);
                 wsRef.current = null;
             }
@@ -139,7 +142,9 @@ export default function ConsoleIDE() {
 
         } catch (error) {
             console.log(error);
-            setOutput(`[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}`);
+            const msg = `[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}\r\n`;
+            terminalRef.current?.write(msg);
+            mobileTerminalRef.current?.write(msg);
             setIsRunning(false);
         }
     };
@@ -151,8 +156,8 @@ export default function ConsoleIDE() {
             wsRef.current = null;
         }
         editorRef.current?.setValue("");
-        setOutput('');
         terminalRef.current?.clear();
+        mobileTerminalRef.current?.clear();
     };
 
     const handleTerminalInput = useCallback((line: string) => {
@@ -165,7 +170,7 @@ export default function ConsoleIDE() {
         <div className="w-full h-screen bg-[#11151B] border border-[#2A313C] shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
 
             {/* HEADER */}
-            <header className="px-6 py-5 border-b border-[#2A313C] bg-[#11151B] flex flex-col justify-center">
+            <header className="shrink-0 px-6 py-5 border-b border-[#2A313C] bg-[#11151B] flex flex-col justify-center">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#F5F7FA] leading-none" style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.02em' }}>
                     Console
                 </h1>
@@ -175,7 +180,7 @@ export default function ConsoleIDE() {
             </header>
 
             {/* TOOLBAR */}
-            <div className="px-6 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between gap-4">
+            <div className="shrink-0 px-6 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between gap-4">
 
                 {/* Left Side: Language Dropdown */}
                 <div className="relative shrink-0" ref={dropdownRef}>
@@ -237,10 +242,10 @@ export default function ConsoleIDE() {
             </div>
 
             {/* MAIN WORKSPACE (Equal Split) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 flex-1 bg-[#0B0E12] relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0 bg-[#0B0E12] relative overflow-hidden">
 
                 {/* LEFT PANEL: CODE EDITOR */}
-                <div className="flex flex-col border-b md:border-b-0 md:border-r border-[#2A313C] bg-[#11151B] md:flex">
+                <div className="flex flex-col min-h-0 overflow-hidden border-b md:border-b-0 md:border-r border-[#2A313C] bg-[#11151B] md:flex">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
                         <span className="uppercase pl-3">{selectedLang.label}</span>
@@ -261,7 +266,7 @@ export default function ConsoleIDE() {
                                 lineNumbers: 'on',
                                 scrollBeyondLastLine: false,
                                 fontFamily: '"JetBrains Mono", monospace',
-                                fontSize: 13,
+                                fontSize: 14,
                                 lineHeight: 24,
                                 fontLigatures: true,
                                 tabSize: 2,
@@ -284,7 +289,7 @@ export default function ConsoleIDE() {
                 </div>
 
                 {/* RIGHT PANEL: OUTPUT TERMINAL - Hidden on mobile, shown on desktop */}
-                <div className="hidden md:flex flex-col bg-[#151A21]">
+                <div className="hidden md:flex flex-col min-h-0 overflow-hidden bg-[#151A21]">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
                         <span>OUTPUT</span>
@@ -292,16 +297,10 @@ export default function ConsoleIDE() {
                     </div>
 
                     {/* Terminal Screen */}
-                    <TerminalView ref={terminalRef} onData={handleTerminalInput}>
-                        {/* {output ? (
-                            <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
-                        ) : (
-                            <div className="text-[#9BA3AF]/40 select-none">
-                                Console output stream...
-                                className="flex-1 p-4 font-mono text-xs sm:text-sm leading-6 overflow-y-auto"
-                            </div>
-                        )} */}
-                    </TerminalView>
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <TerminalView ref={terminalRef} onData={handleTerminalInput}>
+                        </TerminalView>
+                    </div>
                 </div>
 
             </div>
@@ -309,7 +308,7 @@ export default function ConsoleIDE() {
             {/* MOBILE OUTPUT MODAL - Only shown on mobile when RUN is clicked */}
             {isOutputOpen && (
                 <div className="fixed inset-0 md:hidden bg-black/50 z-50 flex flex-col">
-                    <div className="flex-1 flex flex-col bg-[#0B0E12] m-4 rounded-lg border border-[#2A313C] overflow-hidden">
+                    <div className="flex-1 flex flex-col bg-[#151A21] m-4 rounded-lg border border-[#2A313C] overflow-hidden">
                         {/* Modal Header with Close Button */}
                         <div className="px-4 py-3 border-b border-[#2A313C] bg-[#151A21] flex items-center justify-between">
                             <div className="flex items-center gap-2 text-[11px] font-mono font-semibold tracking-wider text-[#9BA3AF]">
@@ -317,7 +316,9 @@ export default function ConsoleIDE() {
                                 <span>OUTPUT</span>
                             </div>
                             <button
-                                onClick={() => setIsOutputOpen(false)}
+                                onClick={() => {
+                                    setIsOutputOpen(false)
+                                }}
                                 className="p-1 hover:bg-[#2A313C] rounded transition-colors"
                                 aria-label="Close output"
                             >
@@ -328,21 +329,23 @@ export default function ConsoleIDE() {
                         </div>
 
                         {/* Terminal Screen */}
-                        <div className="flex-1 p-4 font-mono text-xs leading-6 overflow-y-auto">
-                            {output ? (
+                        <TerminalView ref={mobileTerminalRef} onData={handleTerminalInput}>
+                        </TerminalView>
+                        {/* <div className="flex-1 p-4 font-mono text-xs leading-6 overflow-y-auto">
+                            {/* {output ? (
                                 <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
                             ) : (
                                 <div className="text-[#9BA3AF]/40 select-none">
                                     Console output stream...
                                 </div>
-                            )}
-                        </div>
+                            )} */}
+                        {/* </div> */} 
                     </div>
                 </div>
             )}
 
             {/* FOOTER STATUS BAR */}
-            <footer className="px-4 py-1.5 border-t border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[10px] font-mono text-[#9BA3AF]">
+            <footer className="shrink-0 px-4 py-1.5 border-t border-[#2A313C] bg-[#151A21] flex items-center justify-between text-[10px] font-mono text-[#9BA3AF]">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500/80 animate-pulse"></span>
                     <span>READY</span>
