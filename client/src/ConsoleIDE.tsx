@@ -13,6 +13,16 @@ const LANGUAGES = [
     { id: 'typescript', name: 'TypeScript', label: 'TYPESCRIPT', extension: 'ts' },
 ];
 
+const JAVA_BOILERPLATE = `public class Main {
+  public static void main(String[] args) {
+    // start code from here 
+
+
+    
+  }
+}
+`;
+
 export default function ConsoleIDE() {
     const monaco = useMonaco();
     // const writtenLengthRef = useRef(0);
@@ -28,6 +38,15 @@ export default function ConsoleIDE() {
 
     const handleEditorMount: OnMount = (editor) => {
         editorRef.current = editor;
+    };
+
+    const handleLanguageSelect = (lang: typeof LANGUAGES[number]) => {
+        setSelectedLang(lang);
+        setIsDropdownOpen(false);
+
+        if (lang.id === 'java' && !editorRef.current?.getValue().trim()) {
+            editorRef.current?.setValue(JAVA_BOILERPLATE);
+        }
     };
 
     // Define custom theme
@@ -199,10 +218,7 @@ export default function ConsoleIDE() {
                             {LANGUAGES.map((lang) => (
                                 <button
                                     key={lang.id}
-                                    onClick={() => {
-                                        setSelectedLang(lang);
-                                        setIsDropdownOpen(false);
-                                    }}
+                                    onClick={() => handleLanguageSelect(lang)}
                                     className={`w-full text-left px-3 py-2 transition-colors duration-150 flex items-center justify-between ${selectedLang.id === lang.id
                                         ? 'bg-[#2A313C] text-[#F5F7FA] font-medium'
                                         : 'text-[#9BA3AF] hover:bg-[#11151B] hover:text-[#F5F7FA]'
