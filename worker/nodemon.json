@@ -1,6 +1,6 @@
 {
-  "watch": ["."],
+  "watch": ["index.ts"],
   "ext": "ts,json",
-  "ignore": ["node_modules"],
+  "ignore": ["node_modules", "code/**"],
   "exec": "npx tsx ./index.ts"
 }
