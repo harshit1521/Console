@@ -186,7 +186,258 @@ await subClient.connect()
                 })
             }
 
+            // if (language === "TYPESCRIPT") {
 
+            //     console.log(`started typescript code execution ...`);
+
+            //     const __filename = fileURLToPath(import.meta.url);
+            //     const __dirname = path.dirname(__filename);
+
+            //     const filePath = path.join(__dirname, "code", `${id}.ts`);
+            //     fs.writeFileSync(filePath, code);
+
+            //     const inputChannel = `input:${id}`;
+            //     const outputChannel = `output:${id}`;
+            //     const child = spawn("npx", ["tsx", filePath], { shell: true } ); // tsx runs ts directly, no separate compile step
+
+            //     let timeout = 20000;
+            //     let timer = setTimeout(() => { child.kill("SIGKILL"); }, timeout);
+            //     let warningTimer = setTimeout(() => {
+            //         redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //     }, timeout - 5000);
+
+            //     try {
+            //         await subClient.subscribe(inputChannel, (message) => {
+            //             const response = JSON.parse(message.toString());
+
+            //             if (response.type === "kill") {
+            //                 child.kill("SIGKILL");
+            //             } else if (response.type === "stdin") {
+            //                 child.stdin.write(`${response.data}\n`);
+            //                 clearTimeout(timer);
+            //                 clearTimeout(warningTimer);
+            //                 timer = setTimeout(() => child.kill("SIGKILL"), timeout);
+            //                 warningTimer = setTimeout(() => {
+            //                     redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //                 }, timeout - 5000);
+            //             }
+            //         });
+            //     } catch (error) {
+            //         console.log(`input channel err: ${error}`);
+            //     }
+
+            //     child.stdout.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() }));
+            //     });
+
+            //     child.stderr.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: chunk.toString() }));
+            //     });
+
+            //     await new Promise<void>((resolve) => {
+            //         child.on("close", async (exitCode) => {
+            //             console.log(`execution completed ...`);
+
+            //             try {
+            //                 await subClient.unsubscribe(inputChannel);
+            //             } catch (error) {
+            //                 console.log(`unsubscribe err: ${error}`);
+            //             }
+
+            //             await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
+            //             fs.unlinkSync(filePath);
+            //             clearTimeout(timer);
+            //             clearTimeout(warningTimer);
+            //             resolve();
+            //         });
+            //     });
+            // }
+
+            // if (language === "C++") {
+
+            //     console.log(`started cpp code execution ...`);
+
+            //     const __filename = fileURLToPath(import.meta.url);
+            //     const __dirname = path.dirname(__filename);
+
+            //     const sourcePath = path.join(__dirname, "code", `${id}.cpp`);
+            //     const outPath = path.join(__dirname, "code", `${id}.out`);
+            //     fs.writeFileSync(sourcePath, code);
+
+            //     const inputChannel = `input:${id}`;
+            //     const outputChannel = `output:${id}`;
+
+            //     // ---------------- compile step ----------------
+            //     const compile = spawn("g++", [sourcePath, "-o", outPath]);
+            //     let compileErr = "";
+
+            //     compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
+
+            //     const compileExitCode = await new Promise<number>((resolve) => {
+            //         compile.on("close", (code) => resolve(code ?? 1));
+            //     });
+
+            //     if (compileExitCode !== 0) {
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: compileErr }));
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "done", status: "COMPILE_ERROR" }));
+            //         fs.unlinkSync(sourcePath);
+            //         continue; // skip execution entirely, move to next job in queue
+            //     }
+
+            //     // ---------------- execution step ----------------
+            //     const child = spawn(outPath, []);
+
+            //     let timeout = 20000;
+            //     let timer = setTimeout(() => { child.kill("SIGKILL"); }, timeout);
+            //     let warningTimer = setTimeout(() => {
+            //         redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //     }, timeout - 5000);
+
+            //     try {
+            //         await subClient.subscribe(inputChannel, (message) => {
+            //             const response = JSON.parse(message.toString());
+
+            //             if (response.type === "kill") {
+            //                 child.kill("SIGKILL");
+            //             } else if (response.type === "stdin") {
+            //                 child.stdin.write(`${response.data}\n`);
+            //                 clearTimeout(timer);
+            //                 clearTimeout(warningTimer);
+            //                 timer = setTimeout(() => child.kill("SIGKILL"), timeout);
+            //                 warningTimer = setTimeout(() => {
+            //                     redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //                 }, timeout - 5000);
+            //             }
+            //         });
+            //     } catch (error) {
+            //         console.log(`input channel err: ${error}`);
+            //     }
+
+            //     child.stdout.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() }));
+            //     });
+
+            //     child.stderr.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: chunk.toString() }));
+            //     });
+
+            //     await new Promise<void>((resolve) => {
+            //         child.on("close", async (exitCode) => {
+            //             console.log(`execution completed ...`);
+
+            //             try {
+            //                 await subClient.unsubscribe(inputChannel);
+            //             } catch (error) {
+            //                 console.log(`unsubscribe err: ${error}`);
+            //             }
+
+            //             await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
+            //             fs.unlinkSync(sourcePath);
+            //             if (fs.existsSync(outPath)) fs.unlinkSync(outPath); // clean up compiled binary too
+            //             clearTimeout(timer);
+            //             clearTimeout(warningTimer);
+            //             resolve();
+            //         });
+            //     });
+            // }
+
+            // if (language === "JAVA") {
+
+            //     console.log(`started java code execution ...`);
+
+            //     const __filename = fileURLToPath(import.meta.url);
+            //     const __dirname = path.dirname(__filename);
+
+            //     // Java requires the file name to match the public class name exactly.
+            //     // Safest bet: force the class name to "Main" and require users to name their public class Main,
+            //     // OR extract the class name from the code. Simpler approach shown here: fixed "Main".
+            //     const className = "Main";
+            //     const codeDir = path.join(__dirname, "code", id); // separate folder per job since javac drops a .class file alongside
+            //     fs.mkdirSync(codeDir, { recursive: true });
+            //     const sourcePath = path.join(codeDir, `${className}.java`);
+            //     fs.writeFileSync(sourcePath, code);
+
+            //     const inputChannel = `input:${id}`;
+            //     const outputChannel = `output:${id}`;
+
+            //     // ---------------- compile step ----------------
+            //     const compile = spawn("javac", [sourcePath]);
+            //     let compileErr = "";
+
+            //     compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
+
+            //     const compileExitCode = await new Promise<number>((resolve) => {
+            //         compile.on("close", (code) => resolve(code ?? 1));
+            //     });
+
+            //     if (compileExitCode !== 0) {
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: compileErr }));
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "done", status: "COMPILE_ERROR" }));
+            //         fs.rmSync(codeDir, { recursive: true, force: true });
+            //         continue;
+            //     }
+
+            //     // ---------------- execution step ----------------
+            //     const child = spawn("java", ["-cp", codeDir, className]);
+
+            //     let timeout = 20000;
+            //     let timer = setTimeout(() => { child.kill("SIGKILL"); }, timeout);
+            //     let warningTimer = setTimeout(() => {
+            //         redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //     }, timeout - 5000);
+
+            //     try {
+            //         await subClient.subscribe(inputChannel, (message) => {
+            //             const response = JSON.parse(message.toString());
+
+            //             if (response.type === "kill") {
+            //                 child.kill("SIGKILL");
+            //             } else if (response.type === "stdin") {
+            //                 child.stdin.write(`${response.data}\n`);
+            //                 clearTimeout(timer);
+            //                 clearTimeout(warningTimer);
+            //                 timer = setTimeout(() => child.kill("SIGKILL"), timeout);
+            //                 warningTimer = setTimeout(() => {
+            //                     redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
+            //                 }, timeout - 5000);
+            //             }
+            //         });
+            //     } catch (error) {
+            //         console.log(`input channel err: ${error}`);
+            //     }
+
+            //     child.stdout.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() }));
+            //     });
+
+            //     child.stderr.on("data", async (chunk) => {
+            //         console.log(chunk.toString());
+            //         await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: chunk.toString() }));
+            //     });
+
+            //     await new Promise<void>((resolve) => {
+            //         child.on("close", async (exitCode) => {
+            //             console.log(`execution completed ...`);
+
+            //             try {
+            //                 await subClient.unsubscribe(inputChannel);
+            //             } catch (error) {
+            //                 console.log(`unsubscribe err: ${error}`);
+            //             }
+
+            //             await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
+            //             fs.rmSync(codeDir, { recursive: true, force: true }); // removes .java and .class files together
+            //             clearTimeout(timer);
+            //             clearTimeout(warningTimer);
+            //             resolve();
+            //         });
+            //     });
+            // }
 
         }
     })
