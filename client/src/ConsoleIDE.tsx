@@ -419,12 +419,17 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             )}
 
             {/* FOOTER STATUS BAR */}
-            <footer className="shrink-0 px-4 py-1.5 border-t border-border bg-surface-alt flex items-center justify-between text-[10px] font-mono text-text-muted">
-                <div className="flex items-center gap-2">
+            <footer className="relative shrink-0 px-4 py-1.5 border-t border-border bg-surface-alt flex items-center justify-between text-[10px] font-mono text-text-muted">
+                <div className="flex items-center gap-2 z-10">
                     <span className="w-2 h-2 rounded-full bg-emerald-500/80 animate-pulse"></span>
                     <span>READY</span>
                 </div>
-                <div className="flex items-center gap-4">
+                
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none tracking-widest uppercase">
+                    <span>Build by <span className="font-bold text-text">Harshit</span></span>
+                </div>
+
+                <div className="flex items-center gap-4 z-10">
                     <span>UTF-8</span>
                     <span>2 SPACES</span>
                 </div>
