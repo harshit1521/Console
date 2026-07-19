@@ -47,8 +47,17 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         setSelectedLang(lang);
         setIsDropdownOpen(false);
 
-        if (lang.id === 'java' && !editorRef.current?.getValue().trim()) {
-            editorRef.current?.setValue(JAVA_BOILERPLATE);
+        const currentValue = editorRef.current?.getValue() || "";
+
+        if (lang.id === 'java') {
+            if (!currentValue.trim()) {
+                editorRef.current?.setValue(JAVA_BOILERPLATE);
+            }
+        } else {
+            // If we are switching away from Java and the editor only contains the untouched boilerplate, clear it.
+            if (currentValue === JAVA_BOILERPLATE) {
+                editorRef.current?.setValue("");
+            }
         }
     };
 
