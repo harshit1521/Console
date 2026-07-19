@@ -370,7 +370,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             {/* MOBILE OUTPUT MODAL - Only shown on mobile when RUN is clicked */}
             {isOutputOpen && (
                 <div className="fixed inset-0 md:hidden bg-black/50 z-50 flex flex-col">
-                    <div className="flex-1 flex flex-col bg-surface m-4 rounded-lg border border-border overflow-hidden">
+                    <div className="flex-1 flex flex-col bg-surface-alt m-4 rounded-lg border border-border overflow-hidden">
                         {/* Modal Header with Close Button */}
                         <div className="px-4 py-3 border-b border-border bg-surface-alt flex items-center justify-between">
                             <div className="flex items-center gap-2 text-[11px] font-mono font-semibold tracking-wider text-text-muted">
