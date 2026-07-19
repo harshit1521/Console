@@ -6,6 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 
 interface TerminalProps {
     onData?: (line: string) => void; // called when user hits Enter
+    isDark?: boolean;
 }
 
 export interface TerminalHandle {
@@ -14,7 +15,7 @@ export interface TerminalHandle {
 }
 
 const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
-    ({ onData }, ref) => {
+    ({ onData, isDark = false }, ref) => {
         const containerRef = useRef<HTMLDivElement>(null);
         const xtermRef = useRef<XTerm | null>(null);
         const fitAddonRef = useRef<FitAddon | null>(null);
@@ -32,8 +33,8 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
                 cursorBlink: true,
                 fontSize: 16,
                 theme: {
-                    background: "#151A21",
-                    foreground: "#FAF9F6",
+                    background: isDark ? "#202020" : "#F5F5F5", // mapped to bg-surface-alt
+                    foreground: isDark ? "#F5F5F5" : "#111111", // mapped to text-text
                 },
             });
 
@@ -86,7 +87,16 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
                 window.removeEventListener("resize", handleResize);
                 term.dispose();
             };
-        }, []);
+        }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+        useEffect(() => {
+            if (xtermRef.current) {
+                xtermRef.current.options.theme = {
+                    background: isDark ? "#202020" : "#F5F5F5",
+                    foreground: isDark ? "#F5F5F5" : "#111111",
+                };
+            }
+        }, [isDark]);
 
         // Expose imperative write method to parent
         React.useImperativeHandle(ref, () => ({
