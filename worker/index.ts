@@ -276,7 +276,7 @@ await subClient.connect()
                 const outputChannel = `output:${id}`;
 
                 // ---------------- compile step ----------------
-                const compile = spawn("g++", [sourcePath, "-o", outPath]);
+                const compile = spawn("g++", [sourcePath, "-o", outPath,  "-O0", "-pipe", "-s"]);
                 let compileErr = "";
 
                 compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
