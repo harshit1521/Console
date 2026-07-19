@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { useMonaco, type OnMount } from "@monaco-editor/react";
-import { ChevronDown, Play, Trash2, Terminal, Code2, Sun, Moon } from 'lucide-react';
+import { ChevronDown, Play, Trash2, Terminal, Code2, Sun, Moon, TerminalSquare } from 'lucide-react';
 import TerminalView, { type TerminalHandle } from './components/TerminalView';
 
 const LANGUAGES = [
@@ -225,11 +225,14 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             {/* HEADER */}
             <header className="shrink-0 px-6 py-5 border-b border-border bg-bg flex items-center justify-between">
                 <div className="flex flex-col justify-center">
-                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-text leading-none font-mono">
-                        Console
-                    </h1>
-                    <p className="text-xs sm:text-sm text-text-muted mt-1.5 font-normal tracking-wide">
-                        online multilingual compiler
+                    <div className="flex items-center gap-3">
+                        <TerminalSquare className="w-8 h-8 sm:w-9 sm:h-9 text-text" />
+                        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-text leading-none font-mono">
+                            Console
+                        </h1>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-text-muted mt-2 font-medium tracking-[0.25em] uppercase">
+                        online compiler
                     </p>
                 </div>
                 {onToggleTheme && (
@@ -283,7 +286,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                     <button
                         onClick={handleRun}
                         disabled={isRunning}
-                        className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-text bg-transparent border border-border rounded-md hover:border-text hover:bg-hover active:bg-pressed focus:outline-none focus:ring-1 focus:ring-text transition-all duration-150 disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-white bg-emerald-600 border border-emerald-500 rounded-md hover:bg-emerald-500 active:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-bg transition-all duration-300 disabled:opacity-50"
                     >
                         <Play className="w-3 h-3 fill-current" />
                         <span>{isRunning ? 'RUNNING...' : 'RUN'}</span>
