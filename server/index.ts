@@ -25,8 +25,6 @@ wss.on("connection", async (socket) => {
 
         const res = JSON.parse(data.toString());
 
-        // console.log(res.type);
-
         if (res.type === "start") {
 
             const { code, language } = res;
