@@ -36,10 +36,12 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
     const [isOutputOpen, setIsOutputOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+    const [isEditorReady, setIsEditorReady] = useState(false);
     const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
 
     const handleEditorMount: OnMount = (editor) => {
         editorRef.current = editor;
+        setIsEditorReady(true);
     };
 
     const handleLanguageSelect = (lang: typeof LANGUAGES[number]) => {
@@ -161,9 +163,21 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         terminalRef.current?.clear();
         mobileTerminalRef.current?.clear();
 
+        let clientTimeout: NodeJS.Timeout;
+
         try {
             const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
             wsRef.current = ws;
+
+            // 25 seconds safety timeout (5 seconds longer than worker limit)
+            clientTimeout = setTimeout(() => {
+                if (wsRef.current) {
+                    const msg = `\r\n[ERROR]: Connection timed out (Server unresponsive).\r\n`;
+                    terminalRef.current?.write(msg);
+                    mobileTerminalRef.current?.write(msg);
+                    wsRef.current.close();
+                }
+            }, 25000);
 
             ws.onopen = () => {
                 ws.send(
@@ -187,6 +201,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             }
 
             ws.onerror = (error) => {
+                clearTimeout(clientTimeout);
                 console.error('WebSocket error:', error);
                 const msg = `\r\n[ERROR]: WebSocket connection failed\r\n`;
                 terminalRef.current?.write(msg);
@@ -196,6 +211,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             }
 
             ws.onclose = () => {
+                clearTimeout(clientTimeout);
                 console.log('WebSocket connection closed');
                 const msg = `\r\n[INFO]: Execution connection closed.\r\n`;
                 terminalRef.current?.write(msg);
@@ -205,6 +221,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             }
 
         } catch (error) {
+            if (clientTimeout!) clearTimeout(clientTimeout);
             console.log(error);
             const msg = `\r\n[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}\r\n`;
             terminalRef.current?.write(msg);
@@ -297,7 +314,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                 <div className="flex-1 flex justify-center">
                     <button
                         onClick={handleRun}
-                        disabled={isRunning || !editorRef.current}
+                        disabled={isRunning || !isEditorReady}
                         className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-white bg-emerald-600 border border-emerald-500 rounded-md hover:bg-emerald-500 active:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-bg transition-all duration-300 disabled:opacity-50"
                     >
                         <Play className="w-3 h-3 fill-current" />
