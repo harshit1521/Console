@@ -248,11 +248,11 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
     }, []);
 
     return (
-        <div className="w-full h-screen bg-bg border border-border shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
+        <div className="relative w-full h-screen bg-bg border border-border shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
 
             {/* ------------------------ HEADER ------------------------ */}
 
-            <header className="shrink-0 px-6 py-5 border-b border-border bg-bg flex items-center justify-between">
+            <header className="shrink-0 px-4 sm:px-6 py-4 sm:py-5 border-b border-border bg-bg flex items-center justify-between">
                 <div className="flex flex-col justify-center">
                     <div className="flex items-center gap-3">
                         <TerminalSquare className="w-8 h-8 sm:w-9 sm:h-9 text-text" />
@@ -277,7 +277,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
             </header>
 
             {/* ------------------------ TOOLBAR ------------------------ */}
-            <div className="shrink-0 px-6 py-3 border-b border-border bg-surface flex items-center justify-between gap-4">
+            <div className="shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 border-b border-border bg-surface flex items-center justify-between gap-4">
 
                 {/* ------------------------ Dropdown ------------------------ */}
                 <div className="relative shrink-0" ref={dropdownRef}>
@@ -341,8 +341,8 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                 {/*  ------------------------ LEFT PANEL ------------------------ */}
                 <div className="flex flex-col min-h-0 overflow-hidden border-b md:border-b-0 md:border-r border-border bg-surface md:flex">
                     {/* Label */}
-                    <div className="px-4 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
-                        <span className="uppercase pl-3">{selectedLang.label}</span>
+                    <div className="px-4 sm:px-6 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
+                        <span className="uppercase">{selectedLang.label}</span>
                         <Code2 className="w-3.5 h-3.5 text-text-muted opacity-60" />
                     </div>
 
@@ -356,6 +356,10 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                             options={{
                                 minimap: { enabled: false },
                                 lineNumbers: 'on',
+                                lineNumbersMinChars: 3,
+                                lineDecorationsWidth: 10,
+                                folding: false,
+                                glyphMargin: false,
                                 scrollBeyondLastLine: false,
                                 fontFamily: '"JetBrains Mono", monospace',
                                 fontSize: 14,
@@ -383,9 +387,9 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                 {/* ------------------------ RIGHT PANEL: OUTPUT TERMINAL ------------------------*/}
                 <div className="hidden md:flex flex-col min-h-0 overflow-hidden bg-surface-alt">
                     {/* Label */}
-                    <div className="px-4 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
+                    <div className="px-4 sm:px-6 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
                         <span>OUTPUT</span>
-                        <Terminal className="w-3.5 h-3.5 mr-3 text-text-muted opacity-60" />
+                        <Terminal className="w-3.5 h-3.5 text-text-muted opacity-60" />
                     </div>
 
                     {/* Terminal Screen */}
@@ -399,7 +403,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
 
             {/* ------------------------ MOBILE OUTPUT MODAL ------------------------ */}
             {isOutputOpen && (
-                <div className="fixed inset-0 md:hidden bg-black/50 z-50 flex flex-col">
+                <div className="absolute inset-0 md:hidden bg-black/50 z-50 flex flex-col">
                     <div className="flex-1 flex flex-col bg-surface-alt m-4 rounded-lg border border-border overflow-hidden">
 
                         <div className="px-4 py-3 border-b border-border bg-surface-alt flex items-center justify-between">
