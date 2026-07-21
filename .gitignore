@@ -119,4 +119,12 @@ issue.md
 .yarn/install-state.gz
 .pnp.*
 
+worker_execution.md
+project_report.md
+error.md
+
+
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
+
+# Worker execution code directory
+worker/code/
