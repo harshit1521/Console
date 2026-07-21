@@ -24,7 +24,8 @@ wss.on("connection", async (socket) => {
     socket.on("message", async (data) => {
         let res;
         try {
-             res = JSON.parse(data.toString());
+
+            res = JSON.parse(data.toString());
         } catch (error) {
             console.log(error)
         }
@@ -59,10 +60,10 @@ wss.on("connection", async (socket) => {
             } catch (error) {
                 console.log(error);
             }
-        }else if(res.type === "stdin") {
+        } else if (res.type === "stdin") {
             try {
                 console.log(res.data)
-                await redis.publish(`input:${id}`, JSON.stringify({ type: "stdin" , data: res.data }));
+                await redis.publish(`input:${id}`, JSON.stringify({ type: "stdin", data: res.data }));
             } catch (error) {
                 console.log(error);
             }
