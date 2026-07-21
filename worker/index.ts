@@ -30,82 +30,133 @@ await subClient.connect()
 
             // ---------------- language selection & exectution ----------------
             if (language === "JAVASCRIPT") {
-
                 console.log(`started javascript code execution ...`);
 
                 const __filename = fileURLToPath(import.meta.url);
                 const __dirname = path.dirname(__filename);
-
-                const filePath = path.join(__dirname, "code", `${id}.mjs`); // create js file for each task
-                fs.writeFileSync(filePath, code); // write code to file 
+                const filePath = path.join(__dirname, "code", `${id}.mjs`);
+                
+                // Write user code to temporary file
+                fs.writeFileSync(filePath, code);
 
                 const inputChannel = `input:${id}`;
                 const outputChannel = `output:${id}`;
-                const child = spawn("node", [filePath]); // start node process 
+                const child = spawn("node", [filePath]);
 
                 let timeout = 20000;
-                let timer = setTimeout(() => { child.kill("SIGKILL"); }, timeout); // kill process if blocks thread 
-                let warningTimer = setTimeout(() => {
-                    // a few seconds before the hard kill
-                    redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
-                }, timeout - 5000);
+                let isTerminated = false;
 
-                // subscribe to kill channel ONCE (not per-chunk)
-                try {
-                    await subClient.subscribe(inputChannel, (message) => {
-
-                        const response = JSON.parse(message.toString());
-
-                        if (response.type === "kill") {
-
-                            child.kill("SIGKILL");
-                        } else if (response.type === "stdin") {
-
-                            child.stdin.write(`${response.data}\n`); // that \n is the imp part ...
-                            clearTimeout(timer);
-                            clearTimeout(warningTimer);
-                            timer = setTimeout(() => child.kill("SIGKILL"), timeout);
-                            warningTimer = setTimeout(() => {
-
-                                redis.publish(outputChannel, JSON.stringify({ type: "warning", data: "Execution taking longer than expected, will be terminated in 5s..." }));
-                            }, timeout - 5000);
-                        }
-                    })
-                } catch (error) {
-                    console.log(`input channel err: ${error}`);
-                }
+                // 1. Immediately register stream listeners synchronously (to prevent missing stdout/stderr)
+                let outputSize = 0;
+                const MAX_OUTPUT_SIZE = 5 * 1024 * 1024; // 5MB limit
 
                 child.stdout.on("data", async (chunk) => {
+                    if (isTerminated) return;
                     console.log(chunk.toString());
-                    await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() })) // publish each chunk for read
-                })
+                    await redis.publish(outputChannel, JSON.stringify({ type: "stdout", data: chunk.toString() }));
+
+                    outputSize += chunk.length;
+                    if (outputSize > MAX_OUTPUT_SIZE) {
+                        isTerminated = true;
+                        child.kill("SIGKILL");
+                        await redis.publish(outputChannel, JSON.stringify({ 
+                            type: "stderr", 
+                            data: "\n[ERROR]: Output limit exceeded." 
+                        }));
+                    }
+                });
 
                 child.stderr.on("data", async (chunk) => {
-
+                    if (isTerminated) return;
                     console.log(chunk.toString());
-                    await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: chunk.toString() })); // publish err for read
-                })
+                    await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: chunk.toString() }));
+                });
 
-                await new Promise<void>((resolve) => {
+                // Timeout setup to prevent hanging processes
+                let timer = setTimeout(() => { 
+                    isTerminated = true;
+                    child.kill("SIGKILL"); 
+                }, timeout);
 
-                    child.on("close", async (exitCode) => {
+                let warningTimer = setTimeout(() => {
+                    redis.publish(outputChannel, JSON.stringify({ 
+                        type: "warning", 
+                        data: "Execution taking longer than expected, will be terminated in 5s..." 
+                    }));
+                }, timeout - 5000);
 
-                        console.log(`execution completed ...`);
-
-                        // cleanup: unsubscribe from kill channel
+                // 2. Wrap process execution lifecycle in a Promise and register process events synchronously inside the executor
+                await new Promise<void>(async (resolve) => {
+                    child.on("error", async (err) => {
+                        isTerminated = true;
+                        console.error(`Runtime spawn error: ${err.message}`);
+                        await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: `Runtime Error: ${err.message}` }));
+                        await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
+                        
                         try {
                             await subClient.unsubscribe(inputChannel);
+                            if (fs.existsSync(filePath)) {
+                                fs.unlinkSync(filePath);
+                            }
+                        } catch (error) {
+                            console.log(`cleanup err on error: ${error}`);
+                        }
+                        
+                        clearTimeout(timer);
+                        clearTimeout(warningTimer);
+                        resolve();
+                    });
+
+                    child.on("close", async (exitCode) => {
+                        console.log(`execution completed ...`);
+
+                        try {
+                            await subClient.unsubscribe(inputChannel);
+                            if (fs.existsSync(filePath)) {
+                                fs.unlinkSync(filePath);
+                            }
                         } catch (error) {
                             console.log(`unsubscribe err: ${error}`);
                         }
 
                         await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
-                        fs.unlinkSync(filePath);
-                        clearTimeout(timer)
-                        clearTimeout(warningTimer)
+                        clearTimeout(timer);
+                        clearTimeout(warningTimer);
                         resolve();
-                    })
-                })
+                    });
+
+                    // 3. Subscribe to input/kill channel asynchronously after all listeners are safely attached
+                    try {
+                        await subClient.subscribe(inputChannel, (message) => {
+                            const response = JSON.parse(message.toString());
+
+                            if (response.type === "kill") {
+                                isTerminated = true;
+                                child.kill("SIGKILL");
+                            } else if (response.type === "stdin") {
+                                child.stdin.write(`${response.data}\n`);
+                                
+                                // Reset timers on receiving stdin
+                                clearTimeout(timer);
+                                clearTimeout(warningTimer);
+                                
+                                timer = setTimeout(() => {
+                                    isTerminated = true;
+                                    child.kill("SIGKILL");
+                                }, timeout);
+
+                                warningTimer = setTimeout(() => {
+                                    redis.publish(outputChannel, JSON.stringify({ 
+                                        type: "warning", 
+                                        data: "Execution taking longer than expected, will be terminated in 5s..." 
+                                    }));
+                                }, timeout - 5000);
+                            }
+                        });
+                    } catch (error) {
+                        console.log(`input channel err: ${error}`);
+                    }
+                });
             }
 
             if (language === "PYTHON") {
@@ -205,7 +256,7 @@ await subClient.connect()
                 const tsxCliPath = path.join(__dirname, "node_modules", "tsx", "dist", "cli.mjs");
                 const child = spawn(process.execPath, [tsxCliPath, filePath]); // tsx runs ts directly, no separate compile step
                 console.log("started process");
-                
+
                 let timeout = 20000;
                 let timer = setTimeout(() => { child.kill("SIGKILL"); }, timeout);
                 let warningTimer = setTimeout(() => {
@@ -276,7 +327,7 @@ await subClient.connect()
                 const outputChannel = `output:${id}`;
 
                 // ---------------- compile step ----------------
-                const compile = spawn("g++", [sourcePath, "-o", outPath,  "-O0", "-pipe", "-s"]);
+                const compile = spawn("g++", [sourcePath, "-o", outPath, "-O0", "-pipe", "-s"]);
                 let compileErr = "";
 
                 compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
