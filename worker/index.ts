@@ -14,8 +14,8 @@ const redis = createClient({
 await redis.connect();
 
 // secondary redis client for subscription only ( no other regular operations are allowed, if its in subscription mode ...)
-const subClient = redis.duplicate();
-await subClient.connect()
+const inputClient = redis.duplicate();
+inputClient.connect()
     .then(async () => {
         console.log(`worker started !!`);
 
@@ -94,7 +94,7 @@ await subClient.connect()
                         await redis.publish(outputChannel, JSON.stringify({ type: "done" }));
                         
                         try {
-                            await subClient.unsubscribe(inputChannel);
+                            await inputClient.unsubscribe(inputChannel);
                             if (fs.existsSync(filePath)) {
                                 fs.unlinkSync(filePath);
                             }
@@ -111,7 +111,7 @@ await subClient.connect()
                         console.log(`execution completed ...`);
 
                         try {
-                            await subClient.unsubscribe(inputChannel);
+                            await inputClient.unsubscribe(inputChannel);
                             if (fs.existsSync(filePath)) {
                                 fs.unlinkSync(filePath);
                             }
@@ -127,7 +127,7 @@ await subClient.connect()
 
                     // 3. Subscribe to input/kill channel asynchronously after all listeners are safely attached
                     try {
-                        await subClient.subscribe(inputChannel, (message) => {
+                        await inputClient.subscribe(inputChannel, (message) => {
                             const response = JSON.parse(message.toString());
 
                             if (response.type === "kill") {
