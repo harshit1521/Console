@@ -10,8 +10,8 @@ const redis = createClient({
 await redis.connect();
 
 // secondary redis client for subscription only ( no other regular operations are allowed, if its in subscription mode ...)
-const subClient = redis.duplicate();
-await subClient.connect();
+const outputClient = redis.duplicate();
+await outputClient.connect();
 
 // --------------------- create ws server instance ---------------------
 const wss = new WebSocketServer({ port: 8080 });
@@ -22,14 +22,18 @@ wss.on("connection", async (socket) => {
     const id = randomUUID(); // generates random uuid 
 
     socket.on("message", async (data) => {
-
-        const res = JSON.parse(data.toString());
+        let res;
+        try {
+             res = JSON.parse(data.toString());
+        } catch (error) {
+            console.log(error)
+        }
 
         if (res.type === "start") {
 
             const { code, language } = res;
             try {
-                await subClient.subscribe(`output:${id}`, (message) => {
+                await outputClient.subscribe(`output:${id}`, (message) => {
 
                     const response = JSON.parse(message);
 
@@ -57,7 +61,7 @@ wss.on("connection", async (socket) => {
         }else if(res.type === "stdin") {
             try {
                 console.log(res.data)
-                await subClient.publish(`input:${id}`, JSON.stringify({ type: "stdin" , data: res.data }));
+                await redis.publish(`input:${id}`, JSON.stringify({ type: "stdin" , data: res.data }));
             } catch (error) {
                 console.log(error);
             }
@@ -69,7 +73,8 @@ wss.on("connection", async (socket) => {
     socket.on("close", async () => {
         console.log("WebSocket connection closed, cleaning up Redis client");
         try {
-            await subClient.unsubscribe(`output:${id}`);
+            await redis.publish(`input:${id}`, JSON.stringify({ type: "kill" }));
+            await outputClient.unsubscribe(`output:${id}`);
         } catch (error) {
             console.error(`Failed to unsubscribe from channel output:${id}:`, error);
         }
