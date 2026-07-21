@@ -15,8 +15,6 @@ const JAVA_BOILERPLATE = `public class Main {
   public static void main(String[] args) {
     // start code from here 
 
-
-    
   }
 }
 `;
@@ -27,6 +25,7 @@ interface ConsoleIDEProps {
 }
 
 export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDEProps) {
+
     const monaco = useMonaco();
     // const writtenLengthRef = useRef(0);
     const wsRef = useRef<WebSocket | null>(null);
@@ -153,7 +152,9 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
     }, []);
 
     const handleRun = async () => {
-        const currentCode = editorRef.current?.getValue() ?? "";
+        if (isRunning || !editorRef.current) return;
+
+        const currentCode = editorRef.current.getValue() ?? "";
         console.log(currentCode);
         setIsRunning(true);
         setIsOutputOpen(true);
@@ -161,10 +162,8 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         mobileTerminalRef.current?.clear();
 
         try {
-
-            const ws = new WebSocket(`ws://localhost:8080`);
+            const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
             wsRef.current = ws;
-
 
             ws.onopen = () => {
                 ws.send(
@@ -189,7 +188,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
 
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                const msg = `\n[ERROR]: WebSocket connection failed\r\n`;
+                const msg = `\r\n[ERROR]: WebSocket connection failed\r\n`;
                 terminalRef.current?.write(msg);
                 mobileTerminalRef.current?.write(msg);
                 setIsRunning(false);
@@ -198,13 +197,16 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
 
             ws.onclose = () => {
                 console.log('WebSocket connection closed');
+                const msg = `\r\n[INFO]: Execution connection closed.\r\n`;
+                terminalRef.current?.write(msg);
+                mobileTerminalRef.current?.write(msg);
                 setIsRunning(false);
                 wsRef.current = null;
             }
 
         } catch (error) {
             console.log(error);
-            const msg = `[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}\r\n`;
+            const msg = `\r\n[ERROR]: ${error instanceof Error ? error.message : 'Failed to submit code'}\r\n`;
             terminalRef.current?.write(msg);
             mobileTerminalRef.current?.write(msg);
             setIsRunning(false);
@@ -231,7 +233,8 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
     return (
         <div className="w-full h-screen bg-bg border border-border shadow-2xl overflow-hidden flex flex-col transition-all duration-200">
 
-            {/* HEADER */}
+            {/* ------------------------ HEADER ------------------------ */}
+
             <header className="shrink-0 px-6 py-5 border-b border-border bg-bg flex items-center justify-between">
                 <div className="flex flex-col justify-center">
                     <div className="flex items-center gap-3">
@@ -245,7 +248,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                     </p>
                 </div>
                 {onToggleTheme && (
-                    <button 
+                    <button
                         onClick={onToggleTheme}
                         className="p-2 rounded-md bg-surface-alt border border-border hover:bg-hover text-text flex items-center justify-center relative w-9 h-9 overflow-hidden"
                         aria-label="Toggle theme"
@@ -256,10 +259,10 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                 )}
             </header>
 
-            {/* TOOLBAR */}
+            {/* ------------------------ TOOLBAR ------------------------ */}
             <div className="shrink-0 px-6 py-3 border-b border-border bg-surface flex items-center justify-between gap-4">
 
-                {/* Left Side: Language Dropdown */}
+                {/* ------------------------ Dropdown ------------------------ */}
                 <div className="relative shrink-0" ref={dropdownRef}>
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -290,11 +293,11 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                     )}
                 </div>
 
-                {/* Center: Primary RUN Button */}
+                {/* ------------------------ RUN Button ------------------------ */}
                 <div className="flex-1 flex justify-center">
                     <button
                         onClick={handleRun}
-                        disabled={isRunning}
+                        disabled={isRunning || !editorRef.current}
                         className="flex items-center justify-center gap-2 px-6 py-1.5 text-xs font-bold tracking-wider text-white bg-emerald-600 border border-emerald-500 rounded-md hover:bg-emerald-500 active:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-bg transition-all duration-300 disabled:opacity-50"
                     >
                         <Play className="w-3 h-3 fill-current" />
@@ -302,7 +305,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                     </button>
                 </div>
 
-                {/* Right Side: Secondary CLEAR Button */}
+                {/* ------------------------ CLEAR Button ------------------------ */}
                 <div className="shrink-0">
                     <button
                         onClick={handleClear}
@@ -315,10 +318,10 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
 
             </div>
 
-            {/* MAIN WORKSPACE (Equal Split) */}
+            {/* ------------------------ MAIN WORKSPACE ------------------------ */}
             <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0 bg-bg relative overflow-hidden">
 
-                {/* LEFT PANEL: CODE EDITOR */}
+                {/*  ------------------------ LEFT PANEL ------------------------ */}
                 <div className="flex flex-col min-h-0 overflow-hidden border-b md:border-b-0 md:border-r border-border bg-surface md:flex">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
@@ -331,9 +334,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                         <Editor
                             height="100%"
                             language={selectedLang.id}
-                            // value={code}
                             onMount={handleEditorMount}
-                            // onChange={(value) => setCode(value || '')}
                             theme={isDark ? "console-dark" : "console-light"}
                             options={{
                                 minimap: { enabled: false },
@@ -362,7 +363,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                     </div>
                 </div>
 
-                {/* RIGHT PANEL: OUTPUT TERMINAL - Hidden on mobile, shown on desktop */}
+                {/* ------------------------ RIGHT PANEL: OUTPUT TERMINAL ------------------------*/}
                 <div className="hidden md:flex flex-col min-h-0 overflow-hidden bg-surface-alt">
                     {/* Label */}
                     <div className="px-4 py-2 border-b border-border bg-surface-alt flex items-center justify-between text-[11px] font-mono font-semibold tracking-wider text-text-muted">
@@ -379,11 +380,11 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
 
             </div>
 
-            {/* MOBILE OUTPUT MODAL - Only shown on mobile when RUN is clicked */}
+            {/* ------------------------ MOBILE OUTPUT MODAL ------------------------ */}
             {isOutputOpen && (
                 <div className="fixed inset-0 md:hidden bg-black/50 z-50 flex flex-col">
                     <div className="flex-1 flex flex-col bg-surface-alt m-4 rounded-lg border border-border overflow-hidden">
-                        {/* Modal Header with Close Button */}
+
                         <div className="px-4 py-3 border-b border-border bg-surface-alt flex items-center justify-between">
                             <div className="flex items-center gap-2 text-[11px] font-mono font-semibold tracking-wider text-text-muted">
                                 <Terminal className="w-3.5 h-3.5 text-text-muted opacity-60" />
@@ -401,30 +402,18 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                                 </svg>
                             </button>
                         </div>
-
-                        {/* Terminal Screen */}
-                        <TerminalView ref={mobileTerminalRef} onData={handleTerminalInput} isDark={isDark}>
-                        </TerminalView>
-                        {/* <div className="flex-1 p-4 font-mono text-xs leading-6 overflow-y-auto">
-                            {/* {output ? (
-                                <pre className="whitespace-pre-wrap text-[#F5F7FA] font-mono">{output}</pre>
-                            ) : (
-                                <div className="text-[#9BA3AF]/40 select-none">
-                                    Console output stream...
-                                </div>
-                            )} */}
-                        {/* </div> */} 
+                        <TerminalView ref={mobileTerminalRef} onData={handleTerminalInput} isDark={isDark}></TerminalView>
                     </div>
                 </div>
             )}
 
-            {/* FOOTER STATUS BAR */}
+            {/* ------------------------ FOOTER ------------------------ */}
             <footer className="relative shrink-0 px-4 py-1.5 border-t border-border bg-surface-alt flex items-center justify-between text-[10px] font-mono text-text-muted">
                 <div className="flex items-center gap-2 z-10">
                     <span className="w-2 h-2 rounded-full bg-emerald-500/80 animate-pulse"></span>
                     <span>READY</span>
                 </div>
-                
+
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none tracking-widest uppercase">
                     <span>Build by <span className="font-bold text-text">Harshit</span></span>
                 </div>
