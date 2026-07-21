@@ -47,6 +47,7 @@ wss.on("connection", async (socket) => {
                     socket.send(response.data);
                 });
 
+                await redis.set(`active:${id}`, "true", { EX: 60 });
                 await redis.lPush("task", JSON.stringify({ code, language, id }));
             } catch (error) {
 
@@ -73,6 +74,7 @@ wss.on("connection", async (socket) => {
     socket.on("close", async () => {
         console.log("WebSocket connection closed, cleaning up Redis client");
         try {
+            await redis.del(`active:${id}`);
             await redis.publish(`input:${id}`, JSON.stringify({ type: "kill" }));
             await outputClient.unsubscribe(`output:${id}`);
         } catch (error) {
