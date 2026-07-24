@@ -1,16 +1,9 @@
 import "dotenv/config";
-import { createClient } from "redis";
+import { redis, outputClient } from "./redis.ts";
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
 
-// primary redis client for regular operations like , publish , lpush , brpop etc ..
-const redis = createClient({
-    url: process.env.REDIS_URL!,
-});
 await redis.connect();
-
-// secondary redis client for subscription only ( no other regular operations are allowed, if its in subscription mode ...)
-const outputClient = redis.duplicate();
 await outputClient.connect();
 
 // --------------------- create ws server instance ---------------------
