@@ -3,18 +3,15 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createClient } from "redis";
+import { redis, inputClient } from "./redis.ts";
 import { spawn } from "child_process";
 import { executeProcess } from "./runner.js";
 
+
 // Primary redis client for regular operations like publish, lpush, brpop etc.
-const redis = createClient({
-    url: process.env.REDIS_URL!,
-});
 await redis.connect();
 
 // Secondary redis client for subscription only
-const inputClient = redis.duplicate();
 await inputClient.connect();
 console.log(`worker started !!`);
 
@@ -44,7 +41,7 @@ while (1) {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
         const filePath = path.join(__dirname, "code", `${id}.mjs`);
-        
+
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {
@@ -64,7 +61,7 @@ while (1) {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
         const filePath = path.join(__dirname, "code", `${id}.py`);
-        
+
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {
@@ -83,11 +80,11 @@ while (1) {
 
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
-        
+
         const executionDir = path.join(os.tmpdir(), "console-executions");
         fs.mkdirSync(executionDir, { recursive: true });
         const filePath = path.join(executionDir, `${id}.ts`);
-        
+
         fs.writeFileSync(filePath, code);
 
         const tsxCliPath = path.join(__dirname, "node_modules", "tsx", "dist", "cli.mjs");
@@ -110,7 +107,7 @@ while (1) {
         const __dirname = path.dirname(__filename);
         const sourcePath = path.join(__dirname, "code", `${id}.cpp`);
         const outPath = path.join(__dirname, "code", `${id}.out`);
-        
+
         fs.writeFileSync(sourcePath, code);
 
         // Compile step
@@ -131,7 +128,7 @@ while (1) {
             } catch (e) {
                 console.error("Compile cleanup error:", e);
             }
-            continue; 
+            continue;
         }
 
         // Execution step
@@ -152,12 +149,12 @@ while (1) {
 
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
-        
+
         const className = "Main";
-        const codeDir = path.join(__dirname, "code", id); 
+        const codeDir = path.join(__dirname, "code", id);
         fs.mkdirSync(codeDir, { recursive: true });
         const sourcePath = path.join(codeDir, `${className}.java`);
-        
+
         fs.writeFileSync(sourcePath, code);
 
         // Compile step
