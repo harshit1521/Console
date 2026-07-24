@@ -35,18 +35,28 @@ while (1) {
 
     // ---------------- language selection & execution ----------------
 
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const hostCodeDir = path.resolve(__dirname, "code");
+
     if (language === "JAVASCRIPT") {
-        console.log(`started javascript code execution ...`);
+        console.log(`started sandboxed javascript code execution ...`);
 
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-        const filePath = path.join(__dirname, "code", `${id}.mjs`);
-
+        const filePath = path.join(hostCodeDir, `${id}.mjs`);
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {
-            command: "node",
-            args: [filePath],
+            command: "docker",
+            args: [
+                "run", "--rm", "-i",
+                "--network", "none",
+                "--memory=256m",
+                "--cpus=0.5",
+                "-v", `${hostCodeDir}:/app`,
+                "-w", "/app",
+                "node:20-slim",
+                "node", `${id}.mjs`
+            ],
             inputChannel,
             outputChannel,
             cleanup: () => {
@@ -56,17 +66,23 @@ while (1) {
     }
 
     if (language === "PYTHON") {
-        console.log(`started python code execution ...`);
+        console.log(`started sandboxed python code execution ...`);
 
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-        const filePath = path.join(__dirname, "code", `${id}.py`);
-
+        const filePath = path.join(hostCodeDir, `${id}.py`);
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {
-            command: "python",
-            args: ["-u", filePath],
+            command: "docker",
+            args: [
+                "run", "--rm", "-i",
+                "--network", "none",
+                "--memory=256m",
+                "--cpus=0.5",
+                "-v", `${hostCodeDir}:/app`,
+                "-w", "/app",
+                "python:3.11-slim",
+                "python3", "-u", `${id}.py`
+            ],
             inputChannel,
             outputChannel,
             cleanup: () => {
@@ -76,22 +92,23 @@ while (1) {
     }
 
     if (language === "TYPESCRIPT") {
-        console.log(`started typescript code execution ...`);
+        console.log(`started sandboxed typescript code execution ...`);
 
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-
-        const executionDir = path.join(os.tmpdir(), "console-executions");
-        fs.mkdirSync(executionDir, { recursive: true });
-        const filePath = path.join(executionDir, `${id}.ts`);
-
+        const filePath = path.join(hostCodeDir, `${id}.ts`);
         fs.writeFileSync(filePath, code);
 
-        const tsxCliPath = path.join(__dirname, "node_modules", "tsx", "dist", "cli.mjs");
-
         await executeProcess(redis, inputClient, {
-            command: process.execPath,
-            args: [tsxCliPath, filePath],
+            command: "docker",
+            args: [
+                "run", "--rm", "-i",
+                "--network", "none",
+                "--memory=256m",
+                "--cpus=0.5",
+                "-v", `${hostCodeDir}:/app`,
+                "-w", "/app",
+                "node:20-slim",
+                "npx", "-y", "tsx", `${id}.ts`
+            ],
             inputChannel,
             outputChannel,
             cleanup: () => {
@@ -101,17 +118,21 @@ while (1) {
     }
 
     if (language === "C++") {
-        console.log(`started cpp code execution ...`);
+        console.log(`started sandboxed cpp code execution ...`);
 
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-        const sourcePath = path.join(__dirname, "code", `${id}.cpp`);
-        const outPath = path.join(__dirname, "code", `${id}.out`);
+        const sourcePath = path.join(hostCodeDir, `${id}.cpp`);
+        const outPath = path.join(hostCodeDir, `${id}.out`);
 
         fs.writeFileSync(sourcePath, code);
 
-        // Compile step
-        const compile = spawn("g++", [sourcePath, "-o", outPath, "-O0", "-pipe", "-s"]);
+        // Compile step in a compiler container
+        const compile = spawn("docker", [
+            "run", "--rm",
+            "-v", `${hostCodeDir}:/app`,
+            "-w", "/app",
+            "gcc:13",
+            "g++", `${id}.cpp`, "-o", `${id}.out`, "-O0", "-pipe", "-s"
+        ]);
         let compileErr = "";
 
         compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
@@ -131,10 +152,19 @@ while (1) {
             continue;
         }
 
-        // Execution step
+        // Execution step in isolated container
         await executeProcess(redis, inputClient, {
-            command: outPath,
-            args: [],
+            command: "docker",
+            args: [
+                "run", "--rm", "-i",
+                "--network", "none",
+                "--memory=256m",
+                "--cpus=0.5",
+                "-v", `${hostCodeDir}:/app`,
+                "-w", "/app",
+                "gcc:13",
+                `./${id}.out`
+            ],
             inputChannel,
             outputChannel,
             cleanup: () => {
@@ -145,20 +175,23 @@ while (1) {
     }
 
     if (language === "JAVA") {
-        console.log(`started java code execution ...`);
-
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
+        console.log(`started sandboxed java code execution ...`);
 
         const className = "Main";
-        const codeDir = path.join(__dirname, "code", id);
-        fs.mkdirSync(codeDir, { recursive: true });
-        const sourcePath = path.join(codeDir, `${className}.java`);
+        const taskDir = path.join(hostCodeDir, id);
+        fs.mkdirSync(taskDir, { recursive: true });
+        const sourcePath = path.join(taskDir, `${className}.java`);
 
         fs.writeFileSync(sourcePath, code);
 
         // Compile step
-        const compile = spawn("javac", [sourcePath]);
+        const compile = spawn("docker", [
+            "run", "--rm",
+            "-v", `${hostCodeDir}:/app`,
+            "-w", "/app",
+            "eclipse-temurin:21-jdk-jammy",
+            "javac", `${id}/${className}.java`
+        ]);
         let compileErr = "";
 
         compile.stderr.on("data", (chunk) => { compileErr += chunk.toString(); });
@@ -171,7 +204,7 @@ while (1) {
             await redis.publish(outputChannel, JSON.stringify({ type: "stderr", data: compileErr }));
             await redis.publish(outputChannel, JSON.stringify({ type: "done", status: "COMPILE_ERROR" }));
             try {
-                if (fs.existsSync(codeDir)) fs.rmSync(codeDir, { recursive: true, force: true });
+                if (fs.existsSync(taskDir)) fs.rmSync(taskDir, { recursive: true, force: true });
             } catch (e) {
                 console.error("Compile cleanup error:", e);
             }
@@ -180,12 +213,21 @@ while (1) {
 
         // Execution step
         await executeProcess(redis, inputClient, {
-            command: "java",
-            args: ["-cp", codeDir, className],
+            command: "docker",
+            args: [
+                "run", "--rm", "-i",
+                "--network", "none",
+                "--memory=512m",
+                "--cpus=0.5",
+                "-v", `${hostCodeDir}:/app`,
+                "-w", "/app",
+                "eclipse-temurin:21-jdk-jammy",
+                "java", "-cp", id, className
+            ],
             inputChannel,
             outputChannel,
             cleanup: () => {
-                if (fs.existsSync(codeDir)) fs.rmSync(codeDir, { recursive: true, force: true });
+                if (fs.existsSync(taskDir)) fs.rmSync(taskDir, { recursive: true, force: true });
             }
         });
     }
