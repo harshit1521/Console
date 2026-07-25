@@ -166,7 +166,8 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         let clientTimeout: ReturnType<typeof setTimeout>;
 
         try {
-            const ws = new WebSocket(`wss://your-codespace-url-8080.app.github.dev`);
+            const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
+            const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
             // 25 seconds safety timeout (5 seconds longer than worker limit)
