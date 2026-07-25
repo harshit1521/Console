@@ -38,6 +38,9 @@ while (1) {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const hostCodeDir = path.resolve(__dirname, "code");
+    if (!fs.existsSync(hostCodeDir)) {
+        fs.mkdirSync(hostCodeDir, { recursive: true });
+    }
 
     if (language === "JAVASCRIPT") {
         console.log(`started sandboxed javascript code execution ...`);
