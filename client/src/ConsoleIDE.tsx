@@ -166,7 +166,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         let clientTimeout: ReturnType<typeof setTimeout>;
 
         try {
-            const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
+            const wsUrl = import.meta.env.VITE_WS_URL || "wss://psychic-train-q74vp7vxrx4qh4rpr-8080.app.github.dev/";
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
