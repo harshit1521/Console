@@ -163,7 +163,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         terminalRef.current?.clear();
         mobileTerminalRef.current?.clear();
 
-        let clientTimeout: NodeJS.Timeout;
+        let clientTimeout: ReturnType<typeof setTimeout>;
 
         try {
             const ws = new WebSocket(`wss://your-codespace-url-8080.app.github.dev`);
