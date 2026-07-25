@@ -166,7 +166,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         let clientTimeout: NodeJS.Timeout;
 
         try {
-            const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
+            const ws = new WebSocket(`wss://your-codespace-url-8080.app.github.dev`);
             wsRef.current = ws;
 
             // 25 seconds safety timeout (5 seconds longer than worker limit)

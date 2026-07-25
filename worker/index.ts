@@ -52,7 +52,7 @@ while (1) {
                 "--network", "none",
                 "--memory=256m",
                 "--cpus=0.5",
-                "-v", `${hostCodeDir}:/app`,
+                "-v", `${hostCodeDir}:/app:ro`,
                 "-w", "/app",
                 "node:20-slim",
                 "node", `${id}.mjs`
@@ -78,7 +78,7 @@ while (1) {
                 "--network", "none",
                 "--memory=256m",
                 "--cpus=0.5",
-                "-v", `${hostCodeDir}:/app`,
+                "-v", `${hostCodeDir}:/app:ro`,
                 "-w", "/app",
                 "python:3.11-slim",
                 "python3", "-u", `${id}.py`
@@ -96,7 +96,7 @@ while (1) {
 
         const filePath = path.join(hostCodeDir, `${id}.ts`);
         fs.writeFileSync(filePath, code);
-
+        console.log("files created ..")
         await executeProcess(redis, inputClient, {
             command: "docker",
             args: [
@@ -104,10 +104,10 @@ while (1) {
                 "--network", "none",
                 "--memory=256m",
                 "--cpus=0.5",
-                "-v", `${hostCodeDir}:/app`,
+                "-v", `${hostCodeDir}:/app:ro`,
                 "-w", "/app",
-                "node:20-slim",
-                "npx", "-y", "tsx", `${id}.ts`
+                "node-tsx",
+                "tsx", `${id}.ts`
             ],
             inputChannel,
             outputChannel,
@@ -160,7 +160,7 @@ while (1) {
                 "--network", "none",
                 "--memory=256m",
                 "--cpus=0.5",
-                "-v", `${hostCodeDir}:/app`,
+                "-v", `${hostCodeDir}:/app:ro`,
                 "-w", "/app",
                 "gcc:13",
                 `./${id}.out`
@@ -219,7 +219,7 @@ while (1) {
                 "--network", "none",
                 "--memory=512m",
                 "--cpus=0.5",
-                "-v", `${hostCodeDir}:/app`,
+                "-v", `${hostCodeDir}:/app:ro`,
                 "-w", "/app",
                 "eclipse-temurin:21-jdk-jammy",
                 "java", "-cp", id, className
