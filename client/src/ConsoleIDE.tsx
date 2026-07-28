@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { useMonaco, type OnMount } from "@monaco-editor/react";
-import { ChevronDown, Play, Trash2, Terminal, Code2, Sun, Moon, TerminalSquare } from 'lucide-react';
 import TerminalView, { type TerminalHandle } from './components/TerminalView';
+import { ChevronDown, Play, Trash2, Terminal, Code2, Sun, Moon, TerminalSquare } from 'lucide-react';
 
 const LANGUAGES = [
     { id: 'javascript', name: 'JavaScript', label: 'JAVASCRIPT', extension: 'js' },
@@ -166,7 +166,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
         let clientTimeout: ReturnType<typeof setTimeout>;
 
         try {
-            const wsUrl = import.meta.env.VITE_WS_URL || "wss://psychic-train-q74vp7vxrx4qh4rpr-8080.app.github.dev/";
+            const wsUrl = import.meta.env.VITE_WS_URL;
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 
@@ -347,7 +347,7 @@ export default function ConsoleIDE({ isDark = false, onToggleTheme }: ConsoleIDE
                         <Code2 className="w-3.5 h-3.5 text-text-muted opacity-60" />
                     </div>
 
-                    {/* Editor Input Area */}
+                    {/* ------------------------ Editor Input Area ------------------------ */}
                     <div className="relative flex-1 overflow-hidden">
                         <Editor
                             height="100%"

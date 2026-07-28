@@ -1,4 +1,3 @@
-// Terminal.tsx
 import React, { useEffect, useRef } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -44,9 +43,6 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
             term.open(containerRef.current);
             fitAddon.fit();
 
-            //   term.writeln("Welcome to the terminal");
-            //   term.write("$ ");
-
             // Handle keystrokes
             term.onData((data) => {
                 const code = data.charCodeAt(0);
@@ -87,7 +83,7 @@ const TerminalView = React.forwardRef<TerminalHandle, TerminalProps>(
                 window.removeEventListener("resize", handleResize);
                 term.dispose();
             };
-        }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        }, []);
 
         useEffect(() => {
             if (xtermRef.current) {

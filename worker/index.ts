@@ -8,11 +8,8 @@ import { spawn } from "child_process";
 import { executeProcess } from "./runner.js";
 
 
-// Primary redis client for regular operations like publish, lpush, brpop etc.
-await redis.connect();
-
-// Secondary redis client for subscription only
-await inputClient.connect();
+await redis.connect(); // primary redis instance
+await inputClient.connect(); // secondary redis instance ( for input channel subscription only )
 console.log(`worker started !!`);
 
 while (1) {
@@ -45,7 +42,7 @@ while (1) {
     if (language === "JAVASCRIPT") {
         console.log(`started sandboxed javascript code execution ...`);
 
-        const filePath = path.join(hostCodeDir, `${id}.mjs`);
+        const filePath = path.join(hostCodeDir, `${id}.js`);
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {

@@ -1,5 +1,4 @@
 import { spawn, exec } from "child_process";
-import fs from "fs";
 
 export interface RunnerOptions {
     command: string;
