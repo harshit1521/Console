@@ -42,7 +42,7 @@ while (1) {
     if (language === "JAVASCRIPT") {
         console.log(`started sandboxed javascript code execution ...`);
 
-        const filePath = path.join(hostCodeDir, `${id}.js`);
+        const filePath = path.join(hostCodeDir, `${id}.mjs`);
         fs.writeFileSync(filePath, code);
 
         await executeProcess(redis, inputClient, {
