@@ -43,7 +43,6 @@ To protect the host system from untrusted user code execution, every Docker cont
 * [server/](file:///c:/AllCSstuff/DEV/Console/server) — WebSocket Orchestrator (Node.js, ws, Express)
 * [worker/](file:///c:/AllCSstuff/DEV/Console/worker) — Execution Worker Daemon (spawns sandboxed Docker containers)
 * [assets/](file:///c:/AllCSstuff/DEV/Console/assets) — Assets and architecture diagrams
-* [DEPLOYMENT_AWS.md](file:///c:/AllCSstuff/DEV/Console/DEPLOYMENT_AWS.md) — Detailed AWS EC2 deployment guide
 
 ---
 
@@ -73,7 +72,6 @@ Create a `.env` file in **both** the `server/` and `worker/` directories:
 ```env
 # server/.env & worker/.env
 REDIS_URL="rediss://default:YOUR_PASSWORD@YOUR_REDIS_ENDPOINT:6379"
-DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST/neondb?sslmode=verify-full"
 ```
 
 ### 3. Pre-Pull Docker Sandboxing Images
@@ -164,15 +162,6 @@ The client connects to the WebSocket server at:
   "status": "SUCCESS" // Or "COMPILE_ERROR", "TIMEOUT", "LIMIT_EXCEEDED"
 }
 ```
-
----
-
-## Deployment
-
-For detailed production instructions on **AWS EC2 (t3.small)**, configuration of **Memory Swap Space (swapfile)**, and background daemonizing using **PM2**, refer to:
-👉 **[AWS EC2 Production Deployment Guide](file:///c:/AllCSstuff/DEV/Console/DEPLOYMENT_AWS.md)**
-
----
 
 ## Contributing
 
